@@ -1,5 +1,9 @@
 // dashboard
 import Ecommerce from "pages/Dashboards/Ecommerce";
+import Financial from "pages/Dashboards/Financial";
+import SimpleFinancial from "pages/Dashboards/Financial/SimpleFinancial";
+import DebugFinancial from "pages/Dashboards/Financial/DebugFinancial";
+import TestResponse from "pages/Dashboards/Financial/TestResponse";
 
 // Chat
 import Chat from "pages/Chat";
@@ -60,6 +64,10 @@ interface RouteObject {
 const authProtectedRoutes: Array<RouteObject> = [
   // Dashboard
   { path: "/dashboard", component: Ecommerce },
+  { path: "/financial-dashboard", component: Financial },
+  { path: "/simple-financial", component: SimpleFinancial },
+  { path: "/debug-financial", component: DebugFinancial },
+  { path: "/test-response", component: TestResponse },
 
   //Charts
   { path: "/charts-apex-area", component: AreaCharts },

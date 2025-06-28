@@ -1,4 +1,4 @@
-import { MonitorDot, ShoppingBag } from "lucide-react";
+import { MonitorDot, ShoppingBag, TrendingUp } from "lucide-react";
 
 const menuData: any = [
     {
@@ -15,6 +15,12 @@ const menuData: any = [
                 id: 'ecommercedashboard',
                 label: 'Thương Mại Điện Tử',
                 link: '/dashboard',
+                parentId: "dashboard"
+            },
+            {
+                id: 'financialdashboard',
+                label: 'Kinh Tế',
+                link: '/financial-dashboard',
                 parentId: "dashboard"
             },
         ]

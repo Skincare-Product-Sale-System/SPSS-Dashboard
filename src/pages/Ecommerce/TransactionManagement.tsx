@@ -1,5 +1,8 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import BreadCrumb from "Common/BreadCrumb";
+import TableContainer from "Common/TableContainer";
+import Modal from "Common/Components/Modal";
 import { 
   Search, 
   Eye, 
@@ -12,9 +15,9 @@ import {
   Filter,
   RefreshCw,
   AlertTriangle,
-  Grid,
-  List
+  MoreHorizontal
 } from 'lucide-react';
+import { Dropdown } from "Common/Components/Dropdown";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import axios from 'axios';
@@ -35,6 +38,12 @@ interface Transaction {
   createdTime: string;
   lastUpdatedTime: string;
   approvedTime: string | null;
+}
+
+interface FilterState {
+  status: string;
+  fromDate: string;
+  toDate: string;
 }
 
 interface ApiDataContent {
@@ -115,10 +124,15 @@ const TransactionManagement = () => {
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
   const [transactionData, setTransactionData] = useState<Transaction[]>([]);
+  const [data, setData] = useState<Transaction[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [refreshFlag, setRefreshFlag] = useState(false);
+  
+  // Modal states
+  const [show, setShow] = useState<boolean>(false);
+  const [isOverview, setIsOverview] = useState<boolean>(false);
+  const [eventData, setEventData] = useState<any>();
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -127,6 +141,15 @@ const TransactionManagement = () => {
     toDate: ''
   });
   const [showFilters, setShowFilters] = useState(false);
+
+  // Confirm Modal for status update
+  const [confirmModal, setConfirmModal] = useState<boolean>(false);
+  const [confirmAction, setConfirmAction] = useState<{
+    transactionId: string;
+    status: 'Approved' | 'Rejected';
+    transactionInfo?: any;
+  } | null>(null);
+  const confirmToggle = () => setConfirmModal(!confirmModal);
 
   // Fetch transaction data
   const fetchTransactions = useCallback(async (page: number, size: number, searchFilters?: any) => {
@@ -162,9 +185,9 @@ const TransactionManagement = () => {
         axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       }
       
-      // Updated endpoint based on your API structure
+      // Updated endpoint to match the new API structure
       const response: AxiosApiResponse = await axios.get(
-        `${API_CONFIG.BASE_URL}/skin-analysis/transactions/all`,
+        `${API_CONFIG.BASE_URL}/transactions`,
         {
           params
         }
@@ -196,7 +219,7 @@ const TransactionManagement = () => {
           setCurrentPage(apiData.data.pageNumber);
         }
         
-        toast.success(`Tải thành công ${apiData.data.items.length} giao dịch`);
+        // toast.success(`Tải thành công ${apiData.data.items.length} giao dịch`);
       } else {
         toast.error('Không thể tải dữ liệu giao dịch');
       }
@@ -215,8 +238,20 @@ const TransactionManagement = () => {
     }
   }, [currentPage, filters]);
 
+  // Show confirm modal before updating status
+  const showConfirmModal = (transactionId: string, status: 'Approved' | 'Rejected', transactionInfo?: any) => {
+    setConfirmAction({
+      transactionId,
+      status,
+      transactionInfo
+    });
+    setConfirmModal(true);
+  };
+
   // Handle transaction status update
-  const updateTransactionStatus = async (transactionId: string, status: 'Approved' | 'Rejected') => {
+  const updateTransactionStatus = async () => {
+    if (!confirmAction) return;
+    
     try {
       const authUser = localStorage.getItem("authUser");
       const token = authUser ? JSON.parse(authUser).accessToken : null;
@@ -230,21 +265,28 @@ const TransactionManagement = () => {
         axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       }
       
-      const response = await axios.post(
-        `${API_CONFIG.BASE_URL}/skin-analysis/approve-and-analyze`,
+      const response = await axios.put(
+        `${API_CONFIG.BASE_URL}/transactions/status`,
         {
-          transactionId,
-          status
+          transactionId: confirmAction.transactionId,
+          status: confirmAction.status
         }
       );
       
-      if (response.data?.success) {
-        toast.success(`Giao dịch đã được ${status === 'Approved' ? 'duyệt' : 'từ chối'} thành công`);
-        // Refresh the data
-        fetchTransactions(currentPage, pageSize);
-      } else {
-        toast.error('Có lỗi xảy ra khi cập nhật trạng thái giao dịch');
-      }
+      // API call successful - update local data
+      toast.success(`Giao dịch đã được ${confirmAction.status === 'Approved' ? 'duyệt' : 'từ chối'} thành công`);
+      
+      // Update local data instead of refetching
+      const updatedTransactions = transactionData.map(transaction => 
+        transaction.id === confirmAction.transactionId
+          ? { ...transaction, status: confirmAction.status as any }
+          : transaction
+      );
+      setTransactionData(updatedTransactions);
+      setData(updatedTransactions);
+      
+      setConfirmModal(false);
+      setConfirmAction(null);
     } catch (error: any) {
       console.error('Error updating transaction status:', error);
       
@@ -299,478 +341,531 @@ const TransactionManagement = () => {
     fetchTransactions(1, pageSize, clearedFilters);
   };
 
-  // Filter data based on search term
-  const filteredData = transactionData.filter(item => {
-    if (!searchTerm) return true;
-    
-    const searchLower = searchTerm.toLowerCase();
-    
-    // Search in user name
-    if (item.userName?.toLowerCase().includes(searchLower)) return true;
-    
-    // Search in transaction ID
-    if (item.id?.toLowerCase().includes(searchLower)) return true;
-    
-    // Search in transaction type
-    if (item.transactionType?.toLowerCase().includes(searchLower)) return true;
-    
-    // Search in description
-    if (item.description?.toLowerCase().includes(searchLower)) return true;
-    
-    // Search in status
-    const statusConfig = getStatusConfig(item.status);
-    if (statusConfig.label.toLowerCase().includes(searchLower)) return true;
-    
-    return false;
-  });
+  // Update data when transactions change
+  useEffect(() => {
+    setData(transactionData);
+  }, [transactionData]);
+
+  // Search functionality
+  const filterSearchData = (e: any) => {
+    const search = e.target.value;
+    const keysToSearch = [
+      "userName",
+      "transactionType", 
+      "description",
+      "status"
+    ];
+    const filteredData = transactionData.filter((item: any) => {
+      return keysToSearch.some((key) => {
+        const value = item[key]?.toString().toLowerCase() || "";
+        return value.includes(search.toLowerCase());
+      });
+    });
+    setData(filteredData);
+  };
+
+  // Update Data - for viewing details
+  const handleUpdateDataClick = (ele: any) => {
+    setEventData({ ...ele });
+    setIsOverview(true);
+    setShow(true);
+  };
+
+  // Modify toggle to reset overview mode
+  const toggle = useCallback(() => {
+    if (show) {
+      setShow(false);
+      setEventData("");
+      setIsOverview(false);
+    } else {
+      setShow(true);
+      setEventData("");
+    }
+  }, [show]);
 
   const pendingCount = transactionData.filter(t => t.status === 'Pending').length;
   const approvedCount = transactionData.filter(t => t.status === 'Approved').length;
   const rejectedCount = transactionData.filter(t => t.status === 'Rejected').length;
   const totalAmount = transactionData.reduce((sum, t) => sum + t.amount, 0);
 
+  const columns = useMemo(
+    () => [
+      {
+        header: "Giao Dịch",
+        accessorKey: "id",
+        enableColumnFilter: false,
+        enableSorting: true,
+        size: 200,
+        cell: (cell: any) => (
+          <div className="flex items-center gap-2">
+            <div className="size-10 rounded-full bg-slate-100 dark:bg-zink-600 flex items-center justify-center">
+              <DollarSign size={16} className="text-green-600" />
+            </div>
+            <div>
+              <span className="font-medium">{cell.getValue().substring(0, 8)}...</span>
+              <div className="text-xs text-slate-500">{cell.row.original.transactionType}</div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        header: "Người Dùng",
+        accessorKey: "userName",
+        enableColumnFilter: false,
+        enableSorting: true,
+        size: 150,
+        cell: (cell: any) => (
+          <div className="flex items-center gap-2">
+            <div className="size-8 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
+              <User size={14} className="text-blue-600" />
+            </div>
+            <div>
+              <div className="font-medium">{cell.getValue()}</div>
+              <div className="text-xs text-slate-500">{cell.row.original.userId.substring(0, 8)}...</div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        header: "Số Tiền",
+        accessorKey: "amount",
+        enableColumnFilter: false,
+        enableSorting: true,
+        size: 120,
+        cell: (cell: any) => (
+          <span className="font-semibold text-green-600">
+            {formatCurrency(cell.getValue())}
+          </span>
+        ),
+      },
+      {
+        header: "Trạng Thái",
+        accessorKey: "status",
+        enableColumnFilter: false,
+        enableSorting: true,
+        size: 120,
+        cell: (cell: any) => {
+          const statusConfig = getStatusConfig(cell.getValue());
+          const StatusIcon = statusConfig.icon;
+          return (
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.class}`}>
+              <StatusIcon size={12} className="mr-1" />
+              {statusConfig.label}
+            </span>
+          );
+        },
+      },
+      {
+        header: "Ngày Tạo",
+        accessorKey: "createdTime",
+        enableColumnFilter: false,
+        enableSorting: true,
+        size: 150,
+        cell: (cell: any) => (
+          <div className="text-sm">
+            {formatDate(cell.getValue())}
+          </div>
+        ),
+      },
+      {
+        header: "Hành Động",
+        enableColumnFilter: false,
+        enableSorting: false,
+        size: 100,
+        cell: (cell: any) => (
+          <Dropdown className="relative ltr:ml-2 rtl:mr-2">
+            <Dropdown.Trigger
+              id="transactionAction1"
+              data-bs-toggle="dropdown"
+              className="flex items-center justify-center size-[30px] p-0 text-slate-500 btn bg-slate-100 hover:text-white hover:bg-slate-600 focus:text-white focus:bg-slate-600 focus:ring focus:ring-slate-100 active:text-white active:bg-slate-600 active:border-slate-600 active:ring active:ring-slate-100 dark:bg-slate-500/20 dark:text-slate-400 dark:hover:bg-slate-500 dark:hover:text-white dark:focus:bg-slate-500 dark:focus:text-white dark:active:bg-slate-500 dark:active:text-white dark:ring-slate-400/20"
+            >
+              <MoreHorizontal className="size-3" />
+            </Dropdown.Trigger>
+            <Dropdown.Content
+              placement="bottom-end"
+              className="absolute z-50 py-2 mt-1 ltr:text-left rtl:text-right list-none bg-white rounded-md shadow-md min-w-[10rem] dark:bg-zink-600"
+              aria-labelledby="transactionAction1"
+            >
+              <li>
+                <Link
+                  to="#!"
+                  className="block px-4 py-1.5 text-base transition-all duration-200 ease-linear text-slate-600 hover:bg-slate-100 hover:text-slate-500 focus:bg-slate-100 focus:text-slate-500 dark:text-zink-100 dark:hover:bg-zink-500 dark:hover:text-zink-200 dark:focus:bg-zink-500 dark:focus:text-zink-200"
+                  onClick={() => {
+                    const data = cell.row.original;
+                    handleUpdateDataClick(data);
+                  }}
+                >
+                  <Eye className="inline-block size-3 ltr:mr-1 rtl:ml-1" />{" "}
+                  <span className="align-middle">Xem Chi Tiết</span>
+                </Link>
+              </li>
+              {cell.row.original.status === 'Pending' && (
+                <>
+                  <li>
+                    <Link
+                      to="#!"
+                      className="block px-4 py-1.5 text-base transition-all duration-200 ease-linear text-slate-600 hover:bg-slate-100 hover:text-slate-500 focus:bg-slate-100 focus:text-slate-500 dark:text-zink-100 dark:hover:bg-zink-500 dark:hover:text-zink-200 dark:focus:bg-zink-500 dark:focus:text-zink-200"
+                                             onClick={() => {
+                         const data = cell.row.original;
+                         showConfirmModal(data.id, 'Approved', data);
+                       }}
+                    >
+                      <CheckCircle className="inline-block size-3 ltr:mr-1 rtl:ml-1" />{" "}
+                      <span className="align-middle">Duyệt</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="#!"
+                      className="block px-4 py-1.5 text-base transition-all duration-200 ease-linear text-slate-600 hover:bg-slate-100 hover:text-slate-500 focus:bg-slate-100 focus:text-slate-500 dark:text-zink-100 dark:hover:bg-zink-500 dark:hover:text-zink-200 dark:focus:bg-zink-500 dark:focus:text-zink-200"
+                      onClick={() => {
+                        const data = cell.row.original;
+                        showConfirmModal(data.id, 'Rejected', data);
+                      }}
+                    >
+                      <XCircle className="inline-block size-3 ltr:mr-1 rtl:ml-1" />{" "}
+                      <span className="align-middle">Từ Chối</span>
+                    </Link>
+                  </li>
+                </>
+              )}
+            </Dropdown.Content>
+          </Dropdown>
+        ),
+      },
+    ],
+    [updateTransactionStatus]
+  );
+
   return (
     <React.Fragment>
-      <div className="page-content">
-        <div className="container-fluid">
-          <BreadCrumb title="Quản lý giao dịch" pageTitle="Ecommerce" />
-          
-          {/* Header Stats */}
-          <div className="row mb-4">
-            <div className="col-12">
-              <div className="card bg-gradient-to-r from-blue-500 to-purple-600 text-white">
-                <div className="card-body">
-                  <div className="row">
-                    <div className="col-md-8">
-                      <h4 className="card-title mb-2 text-white">
-                        <DollarSign size={24} className="inline-block mr-2" />
-                        Quản lý giao dịch thanh toán
-                      </h4>
-                      <p className="card-text opacity-90">
-                        Quản lý và duyệt các giao dịch thanh toán cho dịch vụ phân tích da
-                      </p>
-                    </div>
-                    <div className="col-md-4">
-                      <div className="row text-center">
-                        <div className="col-6">
-                          <div className="bg-white bg-opacity-20 rounded-lg p-3 mb-2">
-                            <div className="text-2xl font-bold">{totalCount}</div>
-                            <div className="text-sm opacity-90">Tổng giao dịch</div>
-                          </div>
-                        </div>
-                        <div className="col-6">
-                          <div className="bg-white bg-opacity-20 rounded-lg p-3 mb-2">
-                            <div className="text-2xl font-bold">{formatCurrency(totalAmount)}</div>
-                            <div className="text-sm opacity-90">Tổng giá trị</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="row mt-3">
-                    <div className="col-md-3">
-                      <div className="d-flex align-items-center">
-                        <Clock size={20} className="mr-2 text-yellow-300" />
-                        <div>
-                          <div className="font-semibold">{pendingCount}</div>
-                          <div className="text-sm opacity-90">Chờ duyệt</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-md-3">
-                      <div className="d-flex align-items-center">
-                        <CheckCircle size={20} className="mr-2 text-green-300" />
-                        <div>
-                          <div className="font-semibold">{approvedCount}</div>
-                          <div className="text-sm opacity-90">Đã duyệt</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-md-3">
-                      <div className="d-flex align-items-center">
-                        <XCircle size={20} className="mr-2 text-red-300" />
-                        <div>
-                          <div className="font-semibold">{rejectedCount}</div>
-                          <div className="text-sm opacity-90">Đã từ chối</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-md-3">
-                      <button
-                        className="btn btn-light btn-sm"
-                        onClick={() => fetchTransactions(currentPage, pageSize)}
-                      >
-                        <RefreshCw size={16} className="mr-1" />
-                        Làm mới
-                      </button>
-                    </div>
-                  </div>
-                </div>
+      <BreadCrumb title="Quản Lý Giao Dịch" pageTitle="Ecommerce" />
+      <ToastContainer closeButton={false} limit={1} />
+      
+      {/* Header Stats Card */}
+      <div className="grid grid-cols-1 gap-4 mb-5 lg:grid-cols-4">
+        <div className="card">
+          <div className="card-body">
+            <div className="flex items-center">
+              <div className="size-12 rounded-lg bg-custom-100 dark:bg-custom-500/20 flex items-center justify-center text-custom-500 dark:text-custom-500 mr-3">
+                <DollarSign className="size-6" />
+              </div>
+              <div>
+                <h5 className="mb-1 text-16">{totalCount}</h5>
+                <p className="text-slate-500 dark:text-zink-200 mb-0">Tổng giao dịch</p>
               </div>
             </div>
           </div>
-
-          {/* Main Content Card */}
-          <div className="card">
-            <div className="card-header">
-              <div className="row align-items-center">
-                <div className="col-md-6">
-                  <h5 className="card-title mb-0">
-                    <DollarSign size={20} className="inline-block mr-2" />
-                    Danh sách giao dịch
-                  </h5>
-                </div>
-                <div className="col-md-6">
-                  <div className="d-flex gap-2 justify-content-end">
-                    <div className="position-relative">
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Tìm kiếm giao dịch..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        style={{ paddingLeft: '2.5rem' }}
-                      />
-                      <Search className="position-absolute top-50 start-0 translate-middle-y ms-3" size={16} />
-                    </div>
-                    
-                    <button
-                      className={`btn btn-outline-primary ${showFilters ? 'active' : ''}`}
-                      onClick={() => setShowFilters(!showFilters)}
-                    >
-                      <Filter size={16} />
-                    </button>
-                    
-                    <select
-                      className="form-select"
-                      value={pageSize}
-                      onChange={(e) => handlePageSizeChange(parseInt(e.target.value))}
-                      style={{ width: 'auto' }}
-                    >
-                      <option value={10}>10 / trang</option>
-                      <option value={20}>20 / trang</option>
-                      <option value={50}>50 / trang</option>
-                    </select>
-                    
-                    <div className="btn-group">
-                      <button
-                        className={`btn btn-outline-secondary ${viewMode === 'table' ? 'active' : ''}`}
-                        onClick={() => setViewMode('table')}
-                      >
-                        <List size={16} />
-                      </button>
-                      <button
-                        className={`btn btn-outline-secondary ${viewMode === 'grid' ? 'active' : ''}`}
-                        onClick={() => setViewMode('grid')}
-                      >
-                        <Grid size={16} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
+        </div>
+        <div className="card">
+          <div className="card-body">
+            <div className="flex items-center">
+              <div className="size-12 rounded-lg bg-green-100 dark:bg-green-500/20 flex items-center justify-center text-green-500 dark:text-green-500 mr-3">
+                <CheckCircle className="size-6" />
               </div>
-
-              {/* Filters Panel */}
-              {showFilters && (
-                <div className="mt-3 p-3 border rounded bg-light">
-                  <div className="row g-3">
-                    <div className="col-md-3">
-                      <label className="form-label">Trạng thái</label>
-                      <select
-                        className="form-select"
-                        value={filters.status}
-                        onChange={(e) => handleFilterChange('status', e.target.value)}
-                      >
-                        <option value="">Tất cả</option>
-                        <option value="Pending">Chờ duyệt</option>
-                        <option value="Approved">Đã duyệt</option>
-                        <option value="Rejected">Đã từ chối</option>
-                      </select>
-                    </div>
-                    
-                    <div className="col-md-3">
-                      <label className="form-label">Từ ngày</label>
-                      <input
-                        type="datetime-local"
-                        className="form-control"
-                        value={filters.fromDate}
-                        onChange={(e) => handleFilterChange('fromDate', e.target.value)}
-                      />
-                    </div>
-                    
-                    <div className="col-md-3">
-                      <label className="form-label">Đến ngày</label>
-                      <input
-                        type="datetime-local"
-                        className="form-control"
-                        value={filters.toDate}
-                        onChange={(e) => handleFilterChange('toDate', e.target.value)}
-                      />
-                    </div>
-                    
-                    <div className="col-md-3 d-flex align-items-end gap-2">
-                      <button
-                        className="btn btn-primary flex-fill"
-                        onClick={applyFilters}
-                      >
-                        Áp dụng
-                      </button>
-                      <button
-                        className="btn btn-outline-secondary"
-                        onClick={clearFilters}
-                      >
-                        Xóa
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <div>
+                <h5 className="mb-1 text-16">{approvedCount}</h5>
+                <p className="text-slate-500 dark:text-zink-200 mb-0">Đã duyệt</p>
+              </div>
             </div>
-
-            <div className="card-body">
-              {loading ? (
-                <div className="text-center py-5">
-                  <div className="spinner-border text-primary mb-3" role="status">
-                    <span className="visually-hidden">Đang tải...</span>
-                  </div>
-                  <div>Đang tải dữ liệu giao dịch...</div>
-                </div>
-              ) : filteredData.length === 0 ? (
-                <div className="text-center py-5">
-                  <DollarSign className="text-muted mb-3" size={64} />
-                  <h5>{searchTerm ? 'Không tìm thấy kết quả' : 'Chưa có giao dịch nào'}</h5>
-                  <p className="text-muted">
-                    {searchTerm ? `Không có kết quả nào cho "${searchTerm}"` : 'Dữ liệu giao dịch sẽ hiển thị tại đây'}
-                  </p>
-                </div>
-              ) : viewMode === 'table' ? (
-                <div className="table-responsive">
-                  <table className="table table-striped table-hover align-middle">
-                    <thead className="table-light">
-                      <tr>
-                        <th>Mã GD</th>
-                        <th>Người dùng</th>
-                        <th>Loại GD</th>
-                        <th>Số tiền</th>
-                        <th>Trạng thái</th>
-                        <th>Ngày tạo</th>
-                        <th>Hành động</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredData.map((transaction) => {
-                        const statusConfig = getStatusConfig(transaction.status);
-                        const StatusIcon = statusConfig.icon;
-                        
-                        return (
-                          <tr key={transaction.id}>
-                            <td>
-                              <div className="fw-medium text-primary">
-                                {transaction.id.substring(0, 8)}...
-                              </div>
-                            </td>
-                            <td>
-                              <div className="d-flex align-items-center">
-                                <User size={16} className="text-muted me-2" />
-                                <div>
-                                  <div className="fw-medium">{transaction.userName}</div>
-                                  <div className="text-muted small">{transaction.userId.substring(0, 8)}...</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td>
-                              <span className="badge bg-info">{transaction.transactionType}</span>
-                            </td>
-                            <td>
-                              <div className="fw-bold text-success">
-                                {formatCurrency(transaction.amount)}
-                              </div>
-                            </td>
-                            <td>
-                              <span className={`badge border ${statusConfig.class}`}>
-                                <StatusIcon size={14} className="me-1" />
-                                {statusConfig.label}
-                              </span>
-                            </td>
-                            <td>
-                              <div className="text-muted">
-                                {formatDate(transaction.createdTime)}
-                              </div>
-                            </td>
-                            <td>
-                              <div className="d-flex gap-1">
-                                {transaction.status === 'Pending' && (
-                                  <>
-                                    <button
-                                      className="btn btn-success btn-sm"
-                                      onClick={() => updateTransactionStatus(transaction.id, 'Approved')}
-                                      title="Duyệt giao dịch"
-                                    >
-                                      <CheckCircle size={14} />
-                                    </button>
-                                    <button
-                                      className="btn btn-danger btn-sm"
-                                      onClick={() => updateTransactionStatus(transaction.id, 'Rejected')}
-                                      title="Từ chối giao dịch"
-                                    >
-                                      <XCircle size={14} />
-                                    </button>
-                                  </>
-                                )}
-                                <button
-                                  className="btn btn-outline-primary btn-sm"
-                                  title="Xem chi tiết"
-                                >
-                                  <Eye size={14} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="row g-4">
-                  {filteredData.map((transaction) => {
-                    const statusConfig = getStatusConfig(transaction.status);
-                    const StatusIcon = statusConfig.icon;
-                    
-                    return (
-                      <div key={transaction.id} className="col-lg-4 col-md-6">
-                        <div className="card h-100 border">
-                          <div className="card-body">
-                            <div className="d-flex justify-content-between align-items-start mb-3">
-                              <div>
-                                <h6 className="card-title text-primary mb-1">
-                                  {transaction.id.substring(0, 12)}...
-                                </h6>
-                                <span className="badge bg-info">{transaction.transactionType}</span>
-                              </div>
-                              <span className={`badge border ${statusConfig.class}`}>
-                                <StatusIcon size={14} className="me-1" />
-                                {statusConfig.label}
-                              </span>
-                            </div>
-                            
-                            <div className="mb-3">
-                              <div className="d-flex align-items-center mb-2">
-                                <User size={16} className="text-muted me-2" />
-                                <span className="fw-medium">{transaction.userName}</span>
-                              </div>
-                              <div className="d-flex align-items-center mb-2">
-                                <DollarSign size={16} className="text-success me-2" />
-                                <span className="fw-bold text-success">
-                                  {formatCurrency(transaction.amount)}
-                                </span>
-                              </div>
-                              <div className="d-flex align-items-center">
-                                <Calendar size={16} className="text-muted me-2" />
-                                <span className="text-muted small">
-                                  {formatDate(transaction.createdTime)}
-                                </span>
-                              </div>
-                            </div>
-                            
-                            <p className="text-muted small mb-3">
-                              {transaction.description}
-                            </p>
-                            
-                            <div className="d-flex gap-2">
-                              {transaction.status === 'Pending' && (
-                                <>
-                                  <button
-                                    className="btn btn-success btn-sm flex-fill"
-                                    onClick={() => updateTransactionStatus(transaction.id, 'Approved')}
-                                  >
-                                    <CheckCircle size={14} className="me-1" />
-                                    Duyệt
-                                  </button>
-                                  <button
-                                    className="btn btn-danger btn-sm flex-fill"
-                                    onClick={() => updateTransactionStatus(transaction.id, 'Rejected')}
-                                  >
-                                    <XCircle size={14} className="me-1" />
-                                    Từ chối
-                                  </button>
-                                </>
-                              )}
-                              <button className="btn btn-outline-primary btn-sm">
-                                <Eye size={14} />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Pagination */}
-              {!loading && filteredData.length > 0 && !searchTerm && (
-                <div className="d-flex justify-content-between align-items-center mt-4">
-                  <div className="text-muted">
-                    Hiển thị {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, totalCount)} của {totalCount} kết quả
-                  </div>
-                  <nav>
-                    <ul className="pagination pagination-sm mb-0">
-                      <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                        <button
-                          className="page-link"
-                          onClick={() => handlePageChange(currentPage - 1)}
-                          disabled={currentPage === 1}
-                        >
-                          ‹
-                        </button>
-                      </li>
-                      
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        const page = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
-                        return (
-                          <li key={page} className={`page-item ${page === currentPage ? 'active' : ''}`}>
-                            <button
-                              className="page-link"
-                              onClick={() => handlePageChange(page)}
-                            >
-                              {page}
-                            </button>
-                          </li>
-                        );
-                      })}
-                      
-                      <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                        <button
-                          className="page-link"
-                          onClick={() => handlePageChange(currentPage + 1)}
-                          disabled={currentPage === totalPages}
-                        >
-                          ›
-                        </button>
-                      </li>
-                    </ul>
-                  </nav>
-                </div>
-              )}
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-body">
+            <div className="flex items-center">
+              <div className="size-12 rounded-lg bg-yellow-100 dark:bg-yellow-500/20 flex items-center justify-center text-yellow-500 dark:text-yellow-500 mr-3">
+                <Clock className="size-6" />
+              </div>
+              <div>
+                <h5 className="mb-1 text-16">{pendingCount}</h5>
+                <p className="text-slate-500 dark:text-zink-200 mb-0">Chờ duyệt</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-body">
+            <div className="flex items-center">
+              <div className="size-12 rounded-lg bg-red-100 dark:bg-red-500/20 flex items-center justify-center text-red-500 dark:text-red-500 mr-3">
+                <XCircle className="size-6" />
+              </div>
+              <div>
+                <h5 className="mb-1 text-16">{rejectedCount}</h5>
+                <p className="text-slate-500 dark:text-zink-200 mb-0">Đã từ chối</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <ToastContainer 
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
+      <div className="card" id="transactionListTable">
+        <div className="card-body">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+              <div className="relative">
+                <input
+                  type="text"
+                  className="ltr:pl-8 rtl:pr-8 search form-input border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800 placeholder:text-slate-400 dark:placeholder:text-zink-200"
+                  placeholder="Tìm kiếm giao dịch..."
+                  autoComplete="off"
+                  onChange={(e) => filterSearchData(e)}
+                />
+                <Search className="inline-block size-4 absolute ltr:left-2.5 rtl:right-2.5 top-2.5 text-slate-500 dark:text-zink-200 fill-slate-100 dark:fill-zink-600" />
+              </div>
+              <div>
+                <select
+                  className="form-input border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800"
+                  value={filters.status}
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                >
+                  <option value="">Tất cả trạng thái</option>
+                  <option value="Pending">Chờ duyệt</option>
+                  <option value="Approved">Đã duyệt</option>
+                  <option value="Rejected">Đã từ chối</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <button
+                className="text-white btn bg-custom-500 border-custom-500 hover:text-white hover:bg-custom-600 hover:border-custom-600 focus:text-white focus:bg-custom-600 focus:border-custom-600 focus:ring focus:ring-custom-100 active:text-white active:bg-custom-600 active:border-custom-600 active:ring active:ring-custom-100 dark:ring-custom-400/20 whitespace-nowrap"
+                onClick={() => fetchTransactions(currentPage, pageSize)}
+              >
+                <RefreshCw className="inline-block size-4" />{" "}
+                <span className="align-middle">Làm mới</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="!pt-1 card-body">
+          {data && data.length > 0 ? (
+            <TableContainer
+              isPagination={true}
+              columns={columns || []}
+              data={data || []}
+              customPageSize={pageSize}
+              pageCount={totalPages}
+              currentPage={currentPage}
+              onPageChange={(page: number) => {
+                setCurrentPage(page);
+              }}
+              divclassName="overflow-x-auto"
+              tableclassName="w-full whitespace-nowrap"
+              theadclassName="ltr:text-left rtl:text-right bg-slate-100 dark:bg-zink-600"
+              thclassName="px-3.5 py-2.5 font-semibold border-b border-slate-200 dark:border-zink-500"
+              tdclassName="px-3.5 py-2.5 border-y border-slate-200 dark:border-zink-500"
+              PaginationClassName="flex flex-col items-center gap-4 px-4 mt-4 md:flex-row"
+              showPagination={true}
+            />
+          ) : (
+            <div className="noresult">
+              <div className="py-6 text-center">
+                <Search className="size-6 mx-auto mb-3 text-sky-500 fill-sky-100 dark:fill-sky-500/20" />
+                <h5 className="mt-2 mb-1">Xin lỗi! Không Tìm Thấy Kết Quả</h5>
+                <p className="mb-0 text-slate-500 dark:text-zink-200">
+                  Chúng tôi đã tìm kiếm giao dịch. Chúng tôi không tìm thấy
+                  giao dịch nào cho tìm kiếm của bạn.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <Modal
+        show={show}
+        onHide={toggle}
+        modal-center="true"
+        className="fixed flex flex-col transition-all duration-300 ease-in-out left-2/4 z-drawer -translate-x-2/4 -translate-y-2/4"
+        dialogClassName="w-screen md:w-[30rem] lg:w-[50rem] bg-white shadow rounded-md dark:bg-zink-600"
+      >
+        <Modal.Header
+          className="flex items-center justify-between p-4 border-b dark:border-zink-500"
+          closeButtonClass="transition-all duration-200 ease-linear text-slate-400 hover:text-red-500"
+        >
+          <Modal.Title className="text-16">
+            Chi Tiết Giao Dịch
+          </Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body className="max-h-[calc(theme('height.screen')_-_180px)] p-4 overflow-y-auto">
+          {eventData && (
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+              <div className="xl:col-span-12">
+                <div className="mb-3 text-center">
+                  <div className="relative mx-auto mb-4 size-24 rounded-full overflow-hidden border-2 border-slate-200 dark:border-zink-500 bg-slate-100 dark:bg-zink-600 flex items-center justify-center">
+                    <DollarSign size={32} className="text-green-600" />
+                  </div>
+                  <h5 className="mb-1">{eventData.id}</h5>
+                  <p className="text-slate-500 dark:text-zink-200">ID Giao Dịch</p>
+                </div>
+              </div>
+
+              <div className="xl:col-span-6">
+                <label className="inline-block mb-2 text-base font-medium">
+                  Người Dùng
+                </label>
+                <p className="form-input border-slate-200 dark:border-zink-500 bg-slate-100 dark:bg-zink-600">
+                  {eventData.userName}
+                </p>
+              </div>
+
+              <div className="xl:col-span-6">
+                <label className="inline-block mb-2 text-base font-medium">
+                  Loại Giao Dịch
+                </label>
+                <p className="form-input border-slate-200 dark:border-zink-500 bg-slate-100 dark:bg-zink-600">
+                  {eventData.transactionType}
+                </p>
+              </div>
+
+              <div className="xl:col-span-6">
+                <label className="inline-block mb-2 text-base font-medium">
+                  Số Tiền
+                </label>
+                <p className="form-input border-slate-200 dark:border-zink-500 bg-slate-100 dark:bg-zink-600 text-green-600 font-semibold">
+                  {formatCurrency(eventData.amount)}
+                </p>
+              </div>
+
+              <div className="xl:col-span-6">
+                <label className="inline-block mb-2 text-base font-medium">
+                  Trạng Thái
+                </label>
+                <div className="form-input border-slate-200 dark:border-zink-500 bg-slate-100 dark:bg-zink-600">
+                  {(() => {
+                    const statusConfig = getStatusConfig(eventData.status);
+                    const StatusIcon = statusConfig.icon;
+                    return (
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.class}`}>
+                        <StatusIcon size={12} className="mr-1" />
+                        {statusConfig.label}
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              <div className="xl:col-span-12">
+                <label className="inline-block mb-2 text-base font-medium">
+                  Mô Tả
+                </label>
+                <p className="form-input border-slate-200 dark:border-zink-500 bg-slate-100 dark:bg-zink-600">
+                  {eventData.description}
+                </p>
+              </div>
+
+              <div className="xl:col-span-6">
+                <label className="inline-block mb-2 text-base font-medium">
+                  Ngày Tạo
+                </label>
+                <p className="form-input border-slate-200 dark:border-zink-500 bg-slate-100 dark:bg-zink-600">
+                  {formatDate(eventData.createdTime)}
+                </p>
+              </div>
+
+              <div className="xl:col-span-6">
+                <label className="inline-block mb-2 text-base font-medium">
+                  Ngày Cập Nhật
+                </label>
+                <p className="form-input border-slate-200 dark:border-zink-500 bg-slate-100 dark:bg-zink-600">
+                  {formatDate(eventData.lastUpdatedTime)}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 mt-4">
+            <button
+              type="button"
+              className="text-red-500 bg-white btn hover:text-red-500 hover:bg-red-100 focus:text-red-500 focus:bg-red-100 active:text-red-500 active:bg-red-100 dark:bg-zink-600 dark:hover:bg-red-500/10 dark:focus:bg-red-500/10 dark:active:bg-red-500/10"
+              onClick={toggle}
+            >
+              Đóng
+            </button>
+          </div>
+                 </Modal.Body>
+       </Modal>
+
+       {/* Confirm Modal */}
+       <Modal
+         show={confirmModal}
+         onHide={confirmToggle}
+         modal-center="true"
+         className="fixed flex flex-col transition-all duration-300 ease-in-out left-2/4 z-drawer -translate-x-2/4 -translate-y-2/4"
+         dialogClassName="w-screen md:w-[25rem] bg-white shadow rounded-md dark:bg-zink-600"
+       >
+         <Modal.Header
+           className="flex items-center justify-between p-4 border-b dark:border-zink-500"
+           closeButtonClass="transition-all duration-200 ease-linear text-slate-400 hover:text-red-500"
+         >
+           <Modal.Title className="text-16">
+             Xác Nhận {confirmAction?.status === 'Approved' ? 'Duyệt' : 'Từ Chối'} Giao Dịch
+           </Modal.Title>
+         </Modal.Header>
+
+         <Modal.Body className="p-4">
+           {confirmAction && (
+             <div>
+               <div className="mb-4 text-center">
+                 <div className={`mx-auto mb-4 size-12 rounded-full flex items-center justify-center ${
+                   confirmAction.status === 'Approved' 
+                     ? 'bg-green-100 dark:bg-green-500/20' 
+                     : 'bg-red-100 dark:bg-red-500/20'
+                 }`}>
+                   {confirmAction.status === 'Approved' ? (
+                     <CheckCircle size={24} className="text-green-600" />
+                   ) : (
+                     <XCircle size={24} className="text-red-600" />
+                   )}
+                 </div>
+                 <h5 className="mb-2">
+                   {confirmAction.status === 'Approved' ? 'Duyệt' : 'Từ chối'} giao dịch này?
+                 </h5>
+                 <p className="text-slate-500 dark:text-zink-200">
+                   Bạn có chắc chắn muốn {confirmAction.status === 'Approved' ? 'duyệt' : 'từ chối'} giao dịch{' '}
+                   <span className="font-medium">{confirmAction.transactionId.substring(0, 8)}...</span>?
+                 </p>
+               </div>
+
+               {confirmAction.transactionInfo && (
+                 <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg mb-4">
+                   <div className="flex justify-between items-center mb-2">
+                     <span className="text-sm text-slate-600 dark:text-slate-400">Người dùng:</span>
+                     <span className="font-medium">{confirmAction.transactionInfo.userName}</span>
+                   </div>
+                   <div className="flex justify-between items-center">
+                     <span className="text-sm text-slate-600 dark:text-slate-400">Số tiền:</span>
+                     <span className="font-medium text-green-600">
+                       {formatCurrency(confirmAction.transactionInfo.amount)}
+                     </span>
+                   </div>
+                 </div>
+               )}
+             </div>
+           )}
+
+           <div className="flex justify-end gap-2 mt-4">
+             <button
+               type="button"
+               className="text-slate-500 bg-white btn hover:text-slate-500 hover:bg-slate-100 focus:text-slate-500 focus:bg-slate-100 active:text-slate-500 active:bg-slate-100 dark:bg-zink-600 dark:hover:bg-slate-500/10 dark:focus:bg-slate-500/10 dark:active:bg-slate-500/10"
+               onClick={confirmToggle}
+             >
+               Hủy
+             </button>
+             <button
+               type="button"
+               className={`text-white btn ${
+                 confirmAction?.status === 'Approved'
+                   ? 'bg-green-500 border-green-500 hover:bg-green-600 hover:border-green-600'
+                   : 'bg-red-500 border-red-500 hover:bg-red-600 hover:border-red-600'
+               } focus:ring focus:ring-opacity-50`}
+               onClick={updateTransactionStatus}
+             >
+               {confirmAction?.status === 'Approved' ? 'Duyệt' : 'Từ chối'}
+             </button>
+           </div>
+         </Modal.Body>
+       </Modal>
     </React.Fragment>
   );
 };
