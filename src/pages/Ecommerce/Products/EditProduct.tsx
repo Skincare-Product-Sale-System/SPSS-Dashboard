@@ -45,6 +45,7 @@ interface ProductItem {
   variationOptionIds: string[];
   price: number;
   marketPrice: number;
+  purchasePrice: number;
   quantityInStock: number;
   imageUrl?: string;
   imageFile?: File;  // Add this property
@@ -195,6 +196,7 @@ export default function EditProduct() {
             quantityInStock: item.quantityInStock || 0,
             price: item.price || 0,
             marketPrice: item.marketPrice || 0,
+            purchasePrice: item.purchasePrice || 0,
             imageUrl: item.imageUrl || ""
           };
         });
@@ -206,6 +208,7 @@ export default function EditProduct() {
           variationOptionIds: [],
           price: parseFloat(productData.price?.toString() || '0') || 0,
           marketPrice: parseFloat(productData.marketPrice?.toString() || '0') || 0,
+          purchasePrice: 0,
           quantityInStock: 0
         }]);
       }
@@ -264,6 +267,7 @@ export default function EditProduct() {
             quantityInStock: item.quantityInStock || 0,
             price: item.price || 0,
             marketPrice: item.marketPrice || 0,
+            purchasePrice: item.purchasePrice || 0,
             imageUrl: item.imageUrl || ""
           };
         });
@@ -431,6 +435,7 @@ export default function EditProduct() {
         variationOptionIds: [],
         price: 0,
         marketPrice: 0,
+        purchasePrice: 0,
         quantityInStock: 0
       }
     ]);
@@ -619,6 +624,13 @@ export default function EditProduct() {
       errors.marketPrice = "Vui lòng nhập giá thị trường";
     } else if (item.marketPrice < 0) {
       errors.marketPrice = "Giá thị trường không thể là số âm";
+    }
+    
+    // Validate purchase price
+    if (item.purchasePrice === undefined || item.purchasePrice === null || item.purchasePrice === 0) {
+      errors.purchasePrice = "Vui lòng nhập giá nhập";
+    } else if (item.purchasePrice < 0) {
+      errors.purchasePrice = "Giá nhập không thể là số âm";
     }
     
     // Validate image
@@ -861,6 +873,7 @@ export default function EditProduct() {
             imageUrl: imageUrl,
             price: parseFloat(item.price.toString().replace(/\s/g, '')),
             marketPrice: parseFloat(item.marketPrice.toString().replace(/\s/g, '')),
+            purchasePrice: parseFloat(item.purchasePrice.toString().replace(/\s/g, '')),
             quantityInStock: parseInt(item.quantityInStock.toString())
           };
         }));
@@ -1027,6 +1040,7 @@ export default function EditProduct() {
       variationOptionIds: combo,
       price: parseFloat(productFormik.values.price.toString()) || 0,
       marketPrice: parseFloat(productFormik.values.marketPrice?.toString() || '0') || 0,
+      purchasePrice: 0,
       quantityInStock: 0
     }));
     
@@ -1130,6 +1144,7 @@ export default function EditProduct() {
           imageUrl: imageUrl,
           price: parseFloat(item.price.toString().replace(/\s/g, '')),
           marketPrice: parseFloat(item.marketPrice.toString().replace(/\s/g, '')),
+          purchasePrice: parseFloat(item.purchasePrice.toString().replace(/\s/g, '')),
           quantityInStock: parseInt(item.quantityInStock.toString())
         };
       }));
@@ -1696,6 +1711,25 @@ export default function EditProduct() {
                                 />
                                 {productItemErrors[index]?.marketPrice && (
                                   <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.marketPrice}</p>
+                                )}
+                              </div>
+                              
+                              <div>
+                                <label className="inline-block mb-2 text-sm font-medium">
+                                  Giá nhập (VND) <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  className={`form-input w-full ${productItemErrors[index]?.purchasePrice ? 'border-red-500' : 'border-slate-200'}`}
+                                  placeholder="Nhập giá nhập"
+                                  value={formatPriceDisplay(item.purchasePrice)}
+                                  onChange={(e) => {
+                                    const numericValue = e.target.value.replace(/\D/g, '');
+                                    updateProductItem(index, 'purchasePrice', numericValue ? parseInt(numericValue) : 0);
+                                  }}
+                                />
+                                {productItemErrors[index]?.purchasePrice && (
+                                  <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.purchasePrice}</p>
                                 )}
                               </div>
                               

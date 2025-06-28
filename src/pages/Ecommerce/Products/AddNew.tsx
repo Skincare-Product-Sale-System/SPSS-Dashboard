@@ -40,6 +40,7 @@ interface ProductItem {
   variationOptionIds: string[];
   price: number;
   marketPrice: number;
+  purchasePrice: number;
   quantityInStock: number;
   imageUrl?: string;
 }
@@ -195,6 +196,7 @@ export default function AddNew() {
         variationOptionIds: [],
         price: 0,
         marketPrice: 0,
+        purchasePrice: 0,
         quantityInStock: 0
       }
     ]);
@@ -686,6 +688,7 @@ export default function AddNew() {
           variationOptionIds: [optionId],
           price: 0,
           marketPrice: 0,
+          purchasePrice: 0,
           quantityInStock: 0
         });
       });
@@ -1114,63 +1117,39 @@ export default function AddNew() {
                           ) : null;
                         })}
                         
-                        <div>
-                          <label className="inline-block mb-2 text-sm font-medium">
-                            Số Lượng Trong Kho <span className="text-red-500">*</span>
-                          </label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Giá bán */}
                           <input
-                            type="text"
-                            className={`form-input w-full ${productItemErrors[index]?.quantityInStock ? 'border-red-500' : 'border-slate-200'}`}
-                            placeholder="Nhập số lượng trong kho"
-                            value={item.quantityInStock || ''}
-                            onChange={(e) => {
-                              const numericValue = e.target.value.replace(/\D/g, '');
-                              updateProductItem(index, 'quantityInStock', parseInt(numericValue) || 0);
-                            }}
+                            type="number"
+                            value={item.price}
+                            onChange={e => updateProductItem(index, 'price', Number(e.target.value))}
+                            placeholder="Giá bán"
+                            className="input"
                           />
-                          {productItemErrors[index]?.quantityInStock && (
-                            <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.quantityInStock}</p>
-                          )}
-                        </div>
-                        
-                        <div>
-                          <label className="inline-block mb-2 text-sm font-medium">
-                            Giá (VND) <span className="text-red-500">*</span>
-                          </label>
+                          {/* Giá thị trường */}
                           <input
-                            type="text"
-                            className={`form-input w-full ${productItemErrors[index]?.price ? 'border-red-500' : 'border-slate-200'}`}
-                            placeholder="0"
-                            value={formatPrice(item.price.toString())}
-                            onChange={(e) => {
-                              const formattedValue = formatPrice(e.target.value);
-                              const numericValue = parseFloat(formattedValue.replace(/\s/g, '')) || 0;
-                              updateProductItem(index, 'price', numericValue);
-                            }}
+                            type="number"
+                            value={item.marketPrice}
+                            onChange={e => updateProductItem(index, 'marketPrice', Number(e.target.value))}
+                            placeholder="Giá thị trường"
+                            className="input"
                           />
-                          {productItemErrors[index]?.price && (
-                            <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.price}</p>
-                          )}
-                        </div>
-                        
-                        <div>
-                          <label className="inline-block mb-2 text-sm font-medium">
-                            Giá Thị Trường (VND) <span className="text-red-500">*</span>
-                          </label>
+                          {/* Giá nhập */}
                           <input
-                            type="text"
-                            className={`form-input w-full ${productItemErrors[index]?.marketPrice ? 'border-red-500' : 'border-slate-200'}`}
-                            placeholder="0"
-                            value={formatPrice(item.marketPrice.toString())}
-                            onChange={(e) => {
-                              const formattedValue = formatPrice(e.target.value);
-                              const numericValue = parseFloat(formattedValue.replace(/\s/g, '')) || 0;
-                              updateProductItem(index, 'marketPrice', numericValue);
-                            }}
+                            type="number"
+                            value={item.purchasePrice}
+                            onChange={e => updateProductItem(index, 'purchasePrice', Number(e.target.value))}
+                            placeholder="Giá nhập"
+                            className="input"
                           />
-                          {productItemErrors[index]?.marketPrice && (
-                            <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.marketPrice}</p>
-                          )}
+                          {/* Số lượng */}
+                          <input
+                            type="number"
+                            value={item.quantityInStock}
+                            onChange={e => updateProductItem(index, 'quantityInStock', Number(e.target.value))}
+                            placeholder="Số lượng"
+                            className="input"
+                          />
                         </div>
                         
                         <div className="lg:col-span-2">
