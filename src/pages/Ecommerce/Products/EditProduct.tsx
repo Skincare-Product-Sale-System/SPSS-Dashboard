@@ -1652,169 +1652,185 @@ export default function EditProduct() {
                                 <Trash2 className="size-4" />
                               </button>
                             </div>
-                            
-                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                              <div>
-                                <label className="inline-block mb-2 text-sm font-medium">
-                                  Số lượng <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                  type="number"
-                                  className={`form-input w-full ${
-                                    productItemErrors[index]?.quantityInStock ? 'border-red-500' : 'border-slate-200'
-                                  }`}
-                                  placeholder="Nhập số lượng"
-                                  value={item.quantityInStock}
-                                  onChange={(e) => updateProductItem(index, 'quantityInStock', parseInt(e.target.value) || 0)}
-                                />
-                                {productItemErrors[index]?.quantityInStock && (
-                                  <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.quantityInStock}</p>
-                                )}
-                              </div>
-                              
-                              <div>
-                                <label className="inline-block mb-2 text-sm font-medium">
-                                  Giá (VND) <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                  type="text"
-                                  className={`form-input w-full ${
-                                    productItemErrors[index]?.price ? 'border-red-500' : 'border-slate-200'
-                                  }`}
-                                  placeholder="Nhập giá"
-                                  value={formatPriceDisplay(item.price)}
-                                  onChange={(e) => {
-                                    const numericValue = e.target.value.replace(/\D/g, '');
-                                    updateProductItem(index, 'price', numericValue ? parseInt(numericValue) : 0);
-                                  }}
-                                />
-                                {productItemErrors[index]?.price && (
-                                  <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.price}</p>
-                                )}
-                              </div>
-                              
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                               <div>
                                 <label className="inline-block mb-2 text-sm font-medium">
                                   Giá thị trường (VND) <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                   type="text"
-                                  className={`form-input w-full ${
-                                    productItemErrors[index]?.marketPrice ? 'border-red-500' : 'border-slate-200'
-                                  }`}
-                                  placeholder="Nhập giá thị trường"
-                                  value={formatPriceDisplay(item.marketPrice)}
-                                  onChange={(e) => {
-                                    const numericValue = e.target.value.replace(/\D/g, '');
-                                    updateProductItem(index, 'marketPrice', numericValue ? parseInt(numericValue) : 0);
+                                  value={formatPriceDisplay(item.marketPrice?.toString() || '')}
+                                  onChange={e => {
+                                    const raw = e.target.value.replace(/\s/g, '');
+                                    if (/^\d*$/.test(raw)) {
+                                      const num = parseInt(raw) || 0;
+                                      if (num >= 0) {
+                                        updateProductItem(index, 'marketPrice', num);
+                                      }
+                                    }
                                   }}
+                                  placeholder="Nhập giá thị trường"
+                                  className={`form-input w-full ${productItemErrors[index]?.marketPrice ? 'border-red-500' : 'border-slate-200'}`}
                                 />
+                                {item.marketPrice < 0 && <p className="mt-1 text-sm text-red-500">Giá thị trường không được âm</p>}
                                 {productItemErrors[index]?.marketPrice && (
                                   <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.marketPrice}</p>
                                 )}
                               </div>
-                              
+                              <div>
+                                <label className="inline-block mb-2 text-sm font-medium">
+                                  Số lượng <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  value={item.quantityInStock?.toString() || ''}
+                                  onChange={e => {
+                                    const raw = e.target.value.replace(/\s/g, '');
+                                    if (/^\d*$/.test(raw)) {
+                                      const num = parseInt(raw) || 0;
+                                      if (num >= 0) {
+                                        updateProductItem(index, 'quantityInStock', num);
+                                      }
+                                    }
+                                  }}
+                                  placeholder="Nhập số lượng"
+                                  className={`form-input w-full ${productItemErrors[index]?.quantityInStock ? 'border-red-500' : 'border-slate-200'}`}
+                                />
+                                {item.quantityInStock < 0 && <p className="mt-1 text-sm text-red-500">Số lượng không được âm</p>}
+                                {productItemErrors[index]?.quantityInStock && (
+                                  <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.quantityInStock}</p>
+                                )}
+                              </div>
+                              <div>
+                                <label className="inline-block mb-2 text-sm font-medium">
+                                  Giá bán (VND) <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  value={formatPriceDisplay(item.price?.toString() || '')}
+                                  onChange={e => {
+                                    const raw = e.target.value.replace(/\s/g, '');
+                                    if (/^\d*$/.test(raw)) {
+                                      const num = parseInt(raw) || 0;
+                                      if (num >= 0) {
+                                        updateProductItem(index, 'price', num);
+                                      }
+                                    }
+                                  }}
+                                  placeholder="Nhập giá bán"
+                                  className={`form-input w-full ${productItemErrors[index]?.price ? 'border-red-500' : 'border-slate-200'}`}
+                                />
+                                {item.price < 0 && <p className="mt-1 text-sm text-red-500">Giá bán không được âm</p>}
+                                {productItemErrors[index]?.price && (
+                                  <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.price}</p>
+                                )}
+                              </div>
                               <div>
                                 <label className="inline-block mb-2 text-sm font-medium">
                                   Giá nhập (VND) <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                   type="text"
-                                  className={`form-input w-full ${productItemErrors[index]?.purchasePrice ? 'border-red-500' : 'border-slate-200'}`}
-                                  placeholder="Nhập giá nhập"
-                                  value={formatPriceDisplay(item.purchasePrice)}
-                                  onChange={(e) => {
-                                    const numericValue = e.target.value.replace(/\D/g, '');
-                                    updateProductItem(index, 'purchasePrice', numericValue ? parseInt(numericValue) : 0);
+                                  value={formatPriceDisplay(item.purchasePrice?.toString() || '')}
+                                  onChange={e => {
+                                    const raw = e.target.value.replace(/\s/g, '');
+                                    if (/^\d*$/.test(raw)) {
+                                      const num = parseInt(raw) || 0;
+                                      if (num >= 0) {
+                                        updateProductItem(index, 'purchasePrice', num);
+                                      }
+                                    }
                                   }}
+                                  placeholder="Nhập giá nhập"
+                                  className={`form-input w-full ${productItemErrors[index]?.purchasePrice ? 'border-red-500' : 'border-slate-200'}`}
                                 />
+                                {item.purchasePrice < 0 && <p className="mt-1 text-sm text-red-500">Giá nhập không được âm</p>}
                                 {productItemErrors[index]?.purchasePrice && (
                                   <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.purchasePrice}</p>
                                 )}
                               </div>
-                              
-                              <div className="lg:col-span-3">
-                                <label className="inline-block mb-2 text-sm font-medium">
-                                  Hình ảnh sản phẩm <span className="text-red-500">*</span>
-                                </label>
-                                <Dropzone
-                                  onDrop={(acceptedFiles) => handleProductItemImageUpload(index, acceptedFiles)}
-                                  maxFiles={1}
-                                  accept={{
-                                    "image/*": [".png", ".jpg", ".jpeg", ".webp"],
-                                  }}
-                                >
-                                  {({ getRootProps, getInputProps }) => (
-                                    <div
-                                      className={`border-2 border-dashed rounded-lg ${
-                                        productItemErrors[index]?.image 
-                                          ? 'border-red-500' 
-                                          : 'border-slate-200 dark:border-zink-500'
-                                      }`}
-                                      {...getRootProps()}
-                                    >
-                                      <input {...getInputProps()} />
-                                      <div className="p-4 text-center">
-                                        {/* Check for image in multiple places */}
-                                        {productItemImages[item.id || `temp-${index}`]?.preview ? (
-                                          <div className="relative">
-                                            <img
-                                              src={productItemImages[item.id || `temp-${index}`]?.preview}
-                                              alt={`Product Item ${index + 1}`}
-                                              className="h-32 mx-auto object-contain"
-                                            />
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                removeProductItemImage(index);
-                                              }}
-                                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 size-5 flex items-center justify-center"
-                                            >
-                                              ×
-                                            </button>
-                                            <p className="mt-2 text-sm text-slate-500">
-                                              {productItemImages[item.id || `temp-${index}`]?.formattedSize || "Hình ảnh đã tải lên"}
-                                            </p>
-                                          </div>
-                                        ) : item.imageUrl ? (
-                                          <div className="relative">
-                                            <img
-                                              src={item.imageUrl}
-                                              alt={`Product Item ${index + 1}`}
-                                              className="h-32 mx-auto object-contain"
-                                            />
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                removeProductItemImage(index);
-                                              }}
-                                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 size-5 flex items-center justify-center"
-                                            >
-                                              ×
-                                            </button>
-                                            <p className="mt-2 text-sm text-slate-500">Hình ảnh hiện tại</p>
-                                          </div>
-                                        ) : (
-                                          <>
-                                            <UploadCloud className="size-6 mx-auto mb-3" />
-                                            <h5 className="mb-1">
-                                              Kéo thả hình ảnh vào đây hoặc nhấp để tải lên.
-                                            </h5>
-                                            <p className="text-slate-500 dark:text-zink-200">
-                                              Kích thước tối đa: 2MB
-                                            </p>
-                                          </>
-                                        )}
-                                      </div>
+                            </div>
+                            <div className="lg:col-span-3">
+                              <label className="inline-block mb-2 text-sm font-medium">
+                                Hình ảnh sản phẩm <span className="text-red-500">*</span>
+                              </label>
+                              <Dropzone
+                                onDrop={(acceptedFiles) => handleProductItemImageUpload(index, acceptedFiles)}
+                                maxFiles={1}
+                                accept={{
+                                  "image/*": [".png", ".jpg", ".jpeg", ".webp"],
+                                }}
+                              >
+                                {({ getRootProps, getInputProps }) => (
+                                  <div
+                                    className={`border-2 border-dashed rounded-lg ${
+                                      productItemErrors[index]?.image 
+                                        ? 'border-red-500' 
+                                        : 'border-slate-200 dark:border-zink-500'
+                                    }`}
+                                    {...getRootProps()}
+                                  >
+                                    <input {...getInputProps()} />
+                                    <div className="p-4 text-center">
+                                      {/* Check for image in multiple places */}
+                                      {productItemImages[item.id || `temp-${index}`]?.preview ? (
+                                        <div className="relative">
+                                          <img
+                                            src={productItemImages[item.id || `temp-${index}`]?.preview}
+                                            alt={`Product Item ${index + 1}`}
+                                            className="h-32 mx-auto object-contain"
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              removeProductItemImage(index);
+                                            }}
+                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 size-5 flex items-center justify-center"
+                                          >
+                                            ×
+                                          </button>
+                                          <p className="mt-2 text-sm text-slate-500">
+                                            {productItemImages[item.id || `temp-${index}`]?.formattedSize || "Hình ảnh đã tải lên"}
+                                          </p>
+                                        </div>
+                                      ) : item.imageUrl ? (
+                                        <div className="relative">
+                                          <img
+                                            src={item.imageUrl}
+                                            alt={`Product Item ${index + 1}`}
+                                            className="h-32 mx-auto object-contain"
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              removeProductItemImage(index);
+                                            }}
+                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 size-5 flex items-center justify-center"
+                                          >
+                                            ×
+                                          </button>
+                                          <p className="mt-2 text-sm text-slate-500">Hình ảnh hiện tại</p>
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <UploadCloud className="size-6 mx-auto mb-3" />
+                                          <h5 className="mb-1">
+                                            Kéo thả hình ảnh vào đây hoặc nhấp để tải lên.
+                                          </h5>
+                                          <p className="text-slate-500 dark:text-zink-200">
+                                            Kích thước tối đa: 2MB
+                                          </p>
+                                        </>
+                                      )}
                                     </div>
-                                  )}
-                                </Dropzone>
-                                {productItemErrors[index]?.image && (
-                                  <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.image}</p>
+                                  </div>
                                 )}
-                              </div>
+                              </Dropzone>
+                              {productItemErrors[index]?.image && (
+                                <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.image}</p>
+                              )}
                             </div>
                           </div>
                         ))}

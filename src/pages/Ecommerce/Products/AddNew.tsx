@@ -1094,14 +1094,8 @@ export default function AddNew() {
                       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                         {/* Show only one field per variation option */}
                         {item.variationOptionIds.map((optionId, optIndex) => {
-                          // Find which variation this option belongs to
-                          const variationInfo = availableVariations.find(v => 
-                            v.variationOptions.some(opt => opt.id === optionId)
-                          );
-                          
-                          // Find the specific option
+                          const variationInfo = availableVariations.find(v => v.variationOptions.some(opt => opt.id === optionId));
                           const option = variationInfo?.variationOptions.find(opt => opt.id === optionId);
-                          
                           return variationInfo && option ? (
                             <div key={optIndex}>
                               <label className="inline-block mb-2 text-sm font-medium">
@@ -1116,101 +1110,139 @@ export default function AddNew() {
                             </div>
                           ) : null;
                         })}
-                        
+                        {/* Các trường số: giá bán, giá thị trường, giá nhập, số lượng */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Giá bán */}
-                          <input
-                            type="number"
-                            value={item.price}
-                            onChange={e => updateProductItem(index, 'price', Number(e.target.value))}
-                            placeholder="Giá bán"
-                            className="input"
-                          />
-                          {/* Giá thị trường */}
-                          <input
-                            type="number"
-                            value={item.marketPrice}
-                            onChange={e => updateProductItem(index, 'marketPrice', Number(e.target.value))}
-                            placeholder="Giá thị trường"
-                            className="input"
-                          />
-                          {/* Giá nhập */}
-                          <input
-                            type="number"
-                            value={item.purchasePrice}
-                            onChange={e => updateProductItem(index, 'purchasePrice', Number(e.target.value))}
-                            placeholder="Giá nhập"
-                            className="input"
-                          />
-                          {/* Số lượng */}
-                          <input
-                            type="number"
-                            value={item.quantityInStock}
-                            onChange={e => updateProductItem(index, 'quantityInStock', Number(e.target.value))}
-                            placeholder="Số lượng"
-                            className="input"
-                          />
-                        </div>
-                        
-                        <div className="lg:col-span-2">
-                          <label className="inline-block mb-2 text-sm font-medium">
-                            Hình Ảnh Sản Phẩm <span className="text-red-500">*</span>
-                          </label>
-                          <Dropzone
-                            onDrop={(acceptedFiles) => handleProductItemImageUpload(index, acceptedFiles)}
-                            accept={{
-                              'image/*': ['.jpeg', '.jpg', '.png', '.gif']
-                            }}
-                            maxSize={2 * 1024 * 1024} // 2MB
-                          >
-                            {({ getRootProps, getInputProps }) => (
-                              <div 
-                                {...getRootProps()} 
-                                className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-slate-50 ${
-                                  productItemErrors[index]?.image ? 'border-red-500' : 'border-slate-200'
-                                }`}
-                              >
-                                <input {...getInputProps()} />
-                                
-                                {productItemImages[index] ? (
-                                  <div className="relative">
-                                    <img 
-                                      src={productItemImages[index]?.preview} 
-                                      alt="Preview" 
-                                      className="mx-auto h-32 object-contain"
-                                    />
-                                    <p className="mt-2 text-sm text-slate-500">
-                                      {productItemImages[index]?.formattedSize}
-                                    </p>
-                                    <button
-                                      type="button"
-                                      className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        removeProductItemImage(index);
-                                      }}
-                                    >
-                                      <Trash2 className="size-4" />
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <UploadCloud className="mx-auto size-8 text-slate-400" />
-                                    <p className="mt-2 text-sm text-slate-500">
-                                      Drop image here or click to upload
-                                    </p>
-                                    <p className="text-xs text-slate-400">
-                                      (Max size: 2MB)
-                                    </p>
-                                  </>
-                                )}
-                              </div>
+                          <div>
+                            <label className="inline-block mb-2 text-sm font-medium">
+                              Giá thị trường (VND) <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={formatPrice(item.marketPrice?.toString() || '')}
+                              onChange={e => {
+                                const formattedValue = formatPrice(e.target.value);
+                                const numericValue = parseInt(formattedValue.replace(/\s/g, '')) || 0;
+                                updateProductItem(index, 'marketPrice', numericValue);
+                              }}
+                              placeholder="Nhập giá thị trường"
+                              className={`form-input w-full ${productItemErrors[index]?.marketPrice ? 'border-red-500' : 'border-slate-200'}`}
+                            />
+                            {productItemErrors[index]?.marketPrice && (
+                              <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.marketPrice}</p>
                             )}
-                          </Dropzone>
-                          {productItemErrors[index]?.image && (
-                            <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.image}</p>
-                          )}
+                          </div>
+                          <div>
+                            <label className="inline-block mb-2 text-sm font-medium">
+                              Số lượng <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="number"
+                              value={item.quantityInStock}
+                              onChange={e => updateProductItem(index, 'quantityInStock', Number(e.target.value))}
+                              placeholder="Nhập số lượng"
+                              className={`form-input w-full ${productItemErrors[index]?.quantityInStock ? 'border-red-500' : 'border-slate-200'}`}
+                            />
+                            {productItemErrors[index]?.quantityInStock && (
+                              <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.quantityInStock}</p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="inline-block mb-2 text-sm font-medium">
+                              Giá bán (VND) <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={formatPrice(item.price?.toString() || '')}
+                              onChange={e => {
+                                const formattedValue = formatPrice(e.target.value);
+                                const numericValue = parseInt(formattedValue.replace(/\s/g, '')) || 0;
+                                updateProductItem(index, 'price', numericValue);
+                              }}
+                              placeholder="Nhập giá bán"
+                              className={`form-input w-full ${productItemErrors[index]?.price ? 'border-red-500' : 'border-slate-200'}`}
+                            />
+                            {productItemErrors[index]?.price && (
+                              <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.price}</p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="inline-block mb-2 text-sm font-medium">
+                              Giá nhập (VND) <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={formatPrice(item.purchasePrice?.toString() || '')}
+                              onChange={e => {
+                                const formattedValue = formatPrice(e.target.value);
+                                const numericValue = parseInt(formattedValue.replace(/\s/g, '')) || 0;
+                                updateProductItem(index, 'purchasePrice', numericValue);
+                              }}
+                              placeholder="Nhập giá nhập"
+                              className={`form-input w-full ${productItemErrors[index]?.purchasePrice ? 'border-red-500' : 'border-slate-200'}`}
+                            />
+                            {productItemErrors[index]?.purchasePrice && (
+                              <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.purchasePrice}</p>
+                            )}
+                          </div>
                         </div>
+                      </div>
+                      <div className="lg:col-span-2 mt-4">
+                        <label className="inline-block mb-2 text-sm font-medium">
+                          Hình Ảnh Sản Phẩm <span className="text-red-500">*</span>
+                        </label>
+                        <Dropzone
+                          onDrop={(acceptedFiles) => handleProductItemImageUpload(index, acceptedFiles)}
+                          accept={{
+                            'image/*': ['.jpeg', '.jpg', '.png', '.gif']
+                          }}
+                          maxSize={2 * 1024 * 1024} // 2MB
+                        >
+                          {({ getRootProps, getInputProps }) => (
+                            <div 
+                              {...getRootProps()} 
+                              className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-slate-50 ${
+                                productItemErrors[index]?.image ? 'border-red-500' : 'border-slate-200'
+                              }`}
+                            >
+                              <input {...getInputProps()} />
+                              {productItemImages[index] ? (
+                                <div className="relative">
+                                  <img 
+                                    src={productItemImages[index]?.preview} 
+                                    alt="Preview" 
+                                    className="mx-auto h-32 object-contain"
+                                  />
+                                  <p className="mt-2 text-sm text-slate-500">
+                                    {productItemImages[index]?.formattedSize}
+                                  </p>
+                                  <button
+                                    type="button"
+                                    className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      removeProductItemImage(index);
+                                    }}
+                                  >
+                                    <Trash2 className="size-4" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <UploadCloud className="mx-auto size-8 text-slate-400" />
+                                  <p className="mt-2 text-sm text-slate-500">
+                                    Drop image here or click to upload
+                                  </p>
+                                  <p className="text-xs text-slate-400">
+                                    (Max size: 2MB)
+                                  </p>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </Dropzone>
+                        {productItemErrors[index]?.image && (
+                          <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.image}</p>
+                        )}
                       </div>
                     </div>
                   ))}
