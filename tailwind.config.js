@@ -232,6 +232,7 @@ module.exports = {
             },
             zIndex: {
                 'drawer': '1050',
+                'modal-stacked': '1060',
             },
             backgroundImage: {
                 'auth-pattern': "url('assets/images/auth-bg.jpg')",

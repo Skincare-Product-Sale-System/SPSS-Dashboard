@@ -1,4 +1,6 @@
 import axios from "axios";
+import { API_CONFIG } from "../config/api";
+import { decodeJWT } from "./jwtDecode";
 
 // Set base URL for all API calls
 axios.defaults.baseURL = process.env.REACT_APP_API_URL;
@@ -10,6 +12,64 @@ axios.defaults.headers.common['Access-Control-Allow-Headers'] = 'Origin, X-Reque
 
 // content type
 axios.defaults.headers.post["Content-Type"] = "application/json";
+
+// Kiểm tra token có hết hạn hay không
+const isTokenExpired = (token: string): boolean => {
+  try {
+    const decoded = decodeJWT(token);
+    if (!decoded || !decoded.exp) return true;
+
+    // Lấy thời gian hiện tại (Unix timestamp, đơn vị giây)
+    const currentTime = Math.floor(Date.now() / 1000);
+
+    // Nếu thời gian hiện tại lớn hơn thời gian hết hạn, token đã hết hạn
+    // Tạo buffer 60 giây để tránh trường hợp token sắp hết hạn
+    return currentTime > decoded.exp - 60;
+  } catch (error) {
+    console.error("Error decoding token:", error);
+    return true;
+  }
+};
+
+// Refresh token
+const refreshAuthToken = async (): Promise<string | null> => {
+  try {
+    const authUser = localStorage.getItem("authUser");
+    if (!authUser) return null;
+
+    const parsedUser = JSON.parse(authUser);
+    const refreshToken = parsedUser.refreshToken;
+
+    if (!refreshToken) {
+      console.error("No refresh token available");
+      return null;
+    }
+
+    console.log("Attempting to refresh token");
+    const response = await axios.post(
+      `${API_CONFIG.BASE_URL}/authentications/refresh-token`,
+      { refreshToken },
+      { headers: { "Content-Type": "application/json" } }
+    );
+
+    if (response.data && response.data.accessToken) {
+      const newAccessToken = response.data.accessToken;
+
+      // Cập nhật lại localStorage
+      parsedUser.accessToken = newAccessToken;
+      parsedUser.token = newAccessToken;
+      localStorage.setItem("authUser", JSON.stringify(parsedUser));
+
+      console.log("Token refreshed successfully");
+      return newAccessToken;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error refreshing token:", error);
+    return null;
+  }
+};
 
 // Load authorization token from localStorage on app start
 const loadAuthToken = () => {
@@ -40,15 +100,44 @@ loadAuthToken();
 // Add withCredentials to support cookies, authorization headers with HTTPS
 axios.defaults.withCredentials = true;
 
-// Add request interceptor to log headers
+// Add request interceptor to check token expiration and refresh if needed
 axios.interceptors.request.use(
-  function (config) {
+  async function (config) {
     console.log("Request config:", {
       url: config.url,
       method: config.method,
       headers: config.headers,
       baseURL: config.baseURL
     });
+
+    // Không kiểm tra token cho các request liên quan đến authentication
+    if (config.url?.includes('/authentications/login') ||
+      config.url?.includes('/authentications/refresh-token')) {
+      return config;
+    }
+
+    const authUser = localStorage.getItem("authUser");
+    if (authUser) {
+      const parsedUser = JSON.parse(authUser);
+      const token = parsedUser.accessToken || parsedUser.token;
+
+      if (token && isTokenExpired(token)) {
+        console.log("Token expired, attempting to refresh");
+        const newToken = await refreshAuthToken();
+
+        if (newToken) {
+          // Cập nhật token cho request hiện tại
+          config.headers.Authorization = `Bearer ${newToken}`;
+          console.log("Request will use new token");
+        } else {
+          // Nếu không refresh được token, xóa thông tin user và chuyển hướng đến trang login
+          localStorage.removeItem("authUser");
+          window.location.href = "/";
+          console.log("Could not refresh token, redirecting to login");
+        }
+      }
+    }
+
     return config;
   },
   function (error) {
@@ -69,13 +158,38 @@ axios.interceptors.response.use(
     console.log("Axios interceptor - returning:", result);
     return result;
   },
-  function (error) {
+  async function (error) {
+    // Xử lý trường hợp token hết hạn (401 Unauthorized)
+    if (error.response?.status === 401 && !error.config._retry) {
+      error.config._retry = true; // Đánh dấu đã thử refresh token
+
+      try {
+        const newToken = await refreshAuthToken();
+        if (newToken) {
+          // Cập nhật Authorization header cho request ban đầu
+          error.config.headers.Authorization = `Bearer ${newToken}`;
+          // Thử lại request ban đầu
+          return axios(error.config);
+        } else {
+          // Nếu không refresh được token, xóa thông tin user và chuyển hướng đến trang login
+          localStorage.removeItem("authUser");
+          window.location.href = "/";
+          console.log("Could not refresh token after 401, redirecting to login");
+        }
+      } catch (refreshError) {
+        console.error("Error during token refresh after 401:", refreshError);
+        localStorage.removeItem("authUser");
+        window.location.href = "/";
+        return Promise.reject(refreshError);
+      }
+    }
+
     // Handle CORS errors specifically
     if (error.code === 'ERR_NETWORK' || !error.response) {
       console.error('CORS or Network Error:', error);
       return Promise.reject('Network Error: API is not accessible. This may be due to CORS restrictions.');
     }
-    
+
     // Any status codes that falls outside the range of 2xx cause this function to trigger
     let message;
     switch (error.response?.status) {
@@ -128,4 +242,4 @@ const setAuthorization = (token: any) => {
   }
 };
 
-export { APIClient, setAuthorization, loadAuthToken };
+export { APIClient, setAuthorization, loadAuthToken, refreshAuthToken, isTokenExpired };

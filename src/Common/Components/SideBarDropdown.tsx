@@ -111,6 +111,8 @@ const Dropdown = ({ as: Component = 'div', children, className, id, subitemId }:
   const initActiveMenu = useCallback(() => {
     const pathName = process.env.PUBLIC_URL + currentPath.pathname;
     const ul: any = document.getElementById("navbar-nav");
+    if (!ul) return; // Kiểm tra xem ul có tồn tại không
+
     const items = ul.getElementsByTagName("a");
     let itemsArray = [...items]; // converts NodeList to Array
     removeActivation(itemsArray);
@@ -123,8 +125,13 @@ const Dropdown = ({ as: Component = 'div', children, className, id, subitemId }:
   }, [currentPath.pathname]);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    initActiveMenu();
+    // Thay thế behavior: 'smooth' bằng behavior: 'auto' để tránh lỗi scroll
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    // Thêm timeout để đảm bảo menu được khởi tạo sau khi component đã render
+    const timer = setTimeout(() => {
+      initActiveMenu();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [initActiveMenu]);
   return (
     <DropDownContext.Provider value={{ toggleOpen }}>
