@@ -77,6 +77,8 @@ const editorConfig = {
 
 export default function AddNew() {
   const [productImage, setProductImage] = useState<ProductImage | null>(null);
+  // Add state for multiple product images
+  const [productImages, setProductImages] = useState<ProductImage[]>([]);
   const [brandOptions, setBrandOptions] = useState<any[]>([]);
   const [categoryOptions, setCategoryOptions] = useState<any[]>([]);
   const [skinTypeOptions, setSkinTypeOptions] = useState<any[]>([]);
@@ -87,24 +89,24 @@ export default function AddNew() {
   }>>([]);
   const [productItems, setProductItems] = useState<ProductItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [productItemImages, setProductItemImages] = useState<{[key: number]: ProductImage | null}>({});
+  const [productItemImages, setProductItemImages] = useState<{ [key: number]: ProductImage | null }>({});
   const [productItemErrors, setProductItemErrors] = useState<{ [key: number]: { [key: string]: string } }>({});
   const [availableVariations, setAvailableVariations] = useState<Variation[]>([]);
   const navigate = useNavigate();
 
   const handleProductImageUpload = (files: File[]) => {
     if (files && files.length > 0) {
-      const file = files[0];
-      setProductImage({
+      const newImages = files.map((file) => ({
         file,
         preview: URL.createObjectURL(file),
         formattedSize: formatBytes(file.size),
-      });
+      }));
+      setProductImages([...productImages, ...newImages]);
     }
   };
 
-  const removeProductImage = () => {
-    setProductImage(null);
+  const removeProductImage = (index: number) => {
+    setProductImages(productImages.filter((_, i) => i !== index));
   };
 
   const formatBytes = (bytes: number, decimals = 2) => {
@@ -159,7 +161,7 @@ export default function AddNew() {
       // Fetch variation options - fix the data structure access
       const variationOptionsResponse = await axios.get("https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/variation-options");
       console.log("Variation options response:", variationOptionsResponse.data);
-      
+
       // Check if the response has the expected structure
       if (variationOptionsResponse.data && variationOptionsResponse.data.success && variationOptionsResponse.data.data && variationOptionsResponse.data.data.items) {
         setVariationOptions(variationOptionsResponse.data.data.items);
@@ -173,7 +175,7 @@ export default function AddNew() {
       // Fetch variations
       const variationsResponse = await axios.get("https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/variations");
       console.log("Variations response:", variationsResponse.data);
-      
+
       if (variationsResponse.data && variationsResponse.data.success && variationsResponse.data.data && variationsResponse.data.data.items) {
         setAvailableVariations(variationsResponse.data.data.items);
       } else if (variationsResponse.data && variationsResponse.data.items) {
@@ -200,7 +202,7 @@ export default function AddNew() {
         quantityInStock: 0
       }
     ]);
-    
+
     // Also initialize the image state
     setProductItemImages({
       ...productItemImages,
@@ -222,7 +224,7 @@ export default function AddNew() {
     const updatedItems = [...productItems];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
     setProductItems(updatedItems);
-    
+
     // Validate the updated item
     const errors = validateProductItem(updatedItems[index], index);
     setProductItemErrors({
@@ -243,10 +245,10 @@ export default function AddNew() {
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
     const formattedValue = formatPrice(e.target.value);
     const numericValue = formattedValue.replace(/\s/g, '');
-    
+
     // Update the display value with formatting
     e.target.value = formattedValue;
-    
+
     // Update formik with numeric value
     productFormik.setFieldValue(fieldName, numericValue);
   };
@@ -254,38 +256,38 @@ export default function AddNew() {
   // Update the validateProductItem function to fix image validation
   const validateProductItem = (item: any, index: number) => {
     const errors: { [key: string]: string } = {};
-    
+
     // Validate variation options
     if (item.variationOptionIds.length === 0) {
       errors.variationOptionIds = "Tùy chọn biến thể là bắt buộc";
     }
-    
+
     // Validate quantity
     if (item.quantityInStock === undefined || item.quantityInStock === null) {
       errors.quantityInStock = "Số lượng là bắt buộc";
     } else if (item.quantityInStock < 0) {
       errors.quantityInStock = "Số lượng không thể âm";
     }
-    
+
     // Validate price
     if (item.price === undefined || item.price === null || item.price === 0) {
       errors.price = "Giá là bắt buộc";
     } else if (item.price < 0) {
       errors.price = "Giá không thể âm";
     }
-    
+
     // Validate market price
     if (item.marketPrice === undefined || item.marketPrice === null || item.marketPrice === 0) {
       errors.marketPrice = "Giá thị trường là bắt buộc";
     } else if (item.marketPrice < 0) {
       errors.marketPrice = "Giá thị trường không thể âm";
     }
-    
+
     // Only validate image if no image URL exists
-    if (!item.imageUrl && !productItemImages[index] && productImage === null) {
+    if (!item.imageUrl && !productItemImages[index] && productImages.length === 0) {
       errors.image = "Hình ảnh sản phẩm là bắt buộc";
     }
-    
+
     return errors;
   };
 
@@ -398,17 +400,17 @@ export default function AddNew() {
       try {
         console.log("Form submission started with values:", values);
         console.log("Product items:", productItems);
-        
+
         // Validate all product items
         let hasProductItemErrors = false;
         const allProductItemErrors: { [key: number]: { [key: string]: string } } = {};
-        
+
         if (productItems.length === 0) {
           showErrorAlert("Cần ít nhất một sản phẩm");
           console.error("Validation failed: No product items");
           return;
         }
-        
+
         productItems.forEach((item, index) => {
           const errors = validateProductItem(item, index);
           if (Object.keys(errors).length > 0) {
@@ -417,48 +419,49 @@ export default function AddNew() {
             console.error(`Validation errors for item #${index + 1}:`, errors);
           }
         });
-        
+
         if (hasProductItemErrors) {
           setProductItemErrors(allProductItemErrors);
           showErrorAlert("Vui lòng sửa tất cả lỗi trong các sản phẩm");
           return;
         }
-        
+
         setIsSubmitting(true);
-        
+
         // Get Firebase backend instance
         const firebaseBackend = getFirebaseBackend();
         console.log("Firebase backend initialized");
-        
+
         // Upload product image if exists
         let productImageUrl = "";
-        if (productImage?.file) {
-          console.log("Uploading product image...");
+        let productImageUrls: string[] = [];
+
+        if (productImages.length > 0) {
           try {
-            productImageUrl = await firebaseBackend.uploadFileWithDirectory(
-              productImage.file, 
-              "SPSS/Product-Images"
+            // Use the uploadFiles method to upload multiple images
+            productImageUrls = await firebaseBackend.uploadProductImages(
+              productImages.map(img => img.file)
             );
-            console.log("Product image uploaded successfully:", productImageUrl);
+            console.log("Product images uploaded successfully:", productImageUrls);
           } catch (uploadError) {
-            console.error("Error uploading product image:", uploadError);
-            showErrorAlert("Failed to upload product image. Please try again.");
+            console.error("Error uploading product images:", uploadError);
+            showErrorAlert("Failed to upload product images. Please try again.");
             setIsSubmitting(false);
             return;
           }
         }
-        
+
         // Upload product item images if exist
         console.log("Processing product items...");
         const updatedProductItems = await Promise.all(productItems.map(async (item, index) => {
           let imageUrl = item.imageUrl || "";
-          
+
           // If there's an image file for this item, upload it
           if (productItemImages[index]?.file) {
             console.log(`Uploading image for product item #${index + 1}...`);
             try {
               imageUrl = await firebaseBackend.uploadFileWithDirectory(
-                productItemImages[index]!.file, 
+                productItemImages[index]!.file,
                 "SPSS/Product-Item-Images"
               );
               console.log(`Image for product item #${index + 1} uploaded successfully:`, imageUrl);
@@ -467,13 +470,13 @@ export default function AddNew() {
               throw new Error(`Failed to upload image for product item #${index + 1}`);
             }
           }
-          
+
           return {
             ...item,
             imageUrl
           };
         }));
-        
+
         // Prepare data for API submission in the required format
         const productData = {
           brandId: values.brand,
@@ -483,7 +486,7 @@ export default function AddNew() {
           price: parseFloat(values.price.replace(/\s/g, '')),
           marketPrice: parseFloat(values.marketPrice.toString().replace(/\s/g, '')),
           skinTypeIds: values.skinType,
-          productImageUrls: productImageUrl ? [productImageUrl] : [],
+          productImageUrls: productImageUrls,
           variations: variations,
           productItems: updatedProductItems.map(item => ({
             variationOptionIds: item.variationOptionIds,
@@ -504,13 +507,13 @@ export default function AddNew() {
             skinIssues: values.skinIssues
           }
         };
-        
+
         console.log("FULL JSON PAYLOAD:", JSON.stringify(productData));
-        
+
         // Make API call to create product
         try {
           const response = await axios.post(
-            'https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/products', 
+            'https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/products',
             productData,
             {
               headers: {
@@ -518,14 +521,14 @@ export default function AddNew() {
               }
             }
           );
-          
+
           console.log("API response:", response.data);
-          
+
           // More robust success check
           if (response.data || response.data.success === true) {
             console.log("SUCCESS DETECTED! Redirecting to product list...");
             showSuccessAlert("Product created successfully!");
-            
+
             // Redirect to list view after successful submission
             setTimeout(() => {
               navigate('/apps-ecommerce-product-list');
@@ -538,15 +541,15 @@ export default function AddNew() {
           }
         } catch (apiError: any) {
           console.error("API error:", apiError);
-          
+
           // Improved error handling to show more details
           if (apiError.response) {
             console.error("API error response data:", apiError.response.data);
             console.error("API error response status:", apiError.response.status);
-            
+
             // Extract error message from response with more detail
             let errorMessage = "Failed to create product. Please try again.";
-            
+
             if (apiError.response.data) {
               if (typeof apiError.response.data === 'string') {
                 errorMessage = apiError.response.data;
@@ -567,7 +570,7 @@ export default function AddNew() {
                 }
               }
             }
-            
+
             showErrorAlert(`Error (${apiError.response.status}): ${errorMessage}`);
           } else if (apiError.request) {
             console.error("API error request:", apiError.request);
@@ -608,12 +611,12 @@ export default function AddNew() {
           formattedSize: formatBytes(file.size)
         }
       });
-      
+
       // Update the product item with the file reference
       const updatedItems = [...productItems];
-      updatedItems[index] = { 
-        ...updatedItems[index], 
-        imageUrl: URL.createObjectURL(file) 
+      updatedItems[index] = {
+        ...updatedItems[index],
+        imageUrl: URL.createObjectURL(file)
       };
       setProductItems(updatedItems);
     }
@@ -623,7 +626,7 @@ export default function AddNew() {
     const updatedImages = { ...productItemImages };
     delete updatedImages[index];
     setProductItemImages(updatedImages);
-    
+
     // Remove the file reference from the product item
     const updatedItems = [...productItems];
     const updatedItem = { ...updatedItems[index] };
@@ -675,10 +678,10 @@ export default function AddNew() {
       showErrorAlert("Vui lòng chọn đầy đủ biến thể và tùy chọn trước khi tạo sản phẩm");
       return;
     }
-    
+
     // Create a new array to hold the product items
     const newProductItems: ProductItem[] = [];
-    
+
     // For each variation, create a product item with that variation option
     variations.forEach(variation => {
       // For each selected variation option in this variation
@@ -693,19 +696,19 @@ export default function AddNew() {
         });
       });
     });
-    
+
     // Set the new product items
     setProductItems(newProductItems);
-    
+
     // Initialize images and errors for each new product item
     const newImages: { [key: number]: ProductImage | null } = {};
     const newErrors: { [key: number]: { [key: string]: string } } = {};
-    
+
     newProductItems.forEach((_: any, index: number) => {
       newImages[index] = null;
       newErrors[index] = {};
     });
-    
+
     setProductItemImages(newImages);
     setProductItemErrors(newErrors);
   };
@@ -732,7 +735,7 @@ export default function AddNew() {
                   Trở Lại Danh Sách
                 </button>
               </div>
-              
+
               <form onSubmit={productFormik.handleSubmit}>
                 <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-12 mb-5">
                   {/* Product Image Section - Single Image */}
@@ -740,12 +743,39 @@ export default function AddNew() {
                     <label className="inline-block mb-2 text-base font-medium">
                       Hình Ảnh Sản Phẩm
                     </label>
+
+                    {/* Display uploaded images */}
+                    {productImages.length > 0 && (
+                      <div className="mb-4 grid grid-cols-5 gap-4">
+                        {productImages.map((img, idx) => (
+                          <div key={idx} className="relative h-32 w-32 border rounded-md overflow-hidden">
+                            <img
+                              src={img.preview}
+                              alt={`Product Image ${idx + 1}`}
+                              className="h-full w-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeProductImage(idx)}
+                              className="absolute top-1 left-1 bg-red-500 text-white rounded-full p-1 size-5 flex items-center justify-center"
+                            >
+                              ×
+                            </button>
+                            <span className="absolute bottom-1 right-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
+                              {img.formattedSize}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Upload dropzone */}
                     <Dropzone
                       onDrop={(acceptedFiles) => handleProductImageUpload(acceptedFiles)}
                       accept={{
                         "image/*": [".png", ".jpg", ".jpeg"],
                       }}
-                      maxFiles={1}
+                      maxFiles={5}
                     >
                       {({ getRootProps, getInputProps }) => (
                         <div
@@ -754,38 +784,13 @@ export default function AddNew() {
                         >
                           <input {...getInputProps()} />
                           <div className="p-4 text-center">
-                            {productImage ? (
-                              <div className="relative">
-                                <img
-                                  src={productImage.preview}
-                                  alt="Product"
-                                  className="h-32 mx-auto object-contain"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    removeProductImage();
-                                  }}
-                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 size-5 flex items-center justify-center"
-                                >
-                                  ×
-                                </button>
-                                <p className="mt-1 text-sm text-slate-500">
-                                  {productImage.formattedSize}
-                                </p>
-                              </div>
-                            ) : (
-                              <>
-                                <UploadCloud className="size-6 mx-auto mb-3" />
-                                <h5 className="mb-1">
-                                  Đặt hình ảnh vào đây hoặc nhấp để tải lên.
-                                </h5>
-                                <p className="text-slate-500 dark:text-zink-200">
-                                  Kích thước tối đa: 2MB
-                                </p>
-                              </>
-                            )}
+                            <UploadCloud className="size-6 mx-auto mb-3" />
+                            <h5 className="mb-1">
+                              Đặt hình ảnh vào đây hoặc nhấp để tải lên.
+                            </h5>
+                            <p className="text-slate-500 dark:text-zink-200">
+                              Kích thước tối đa: 2MB
+                            </p>
                           </div>
                         </div>
                       )}
@@ -803,9 +808,8 @@ export default function AddNew() {
                       type="text"
                       id="title"
                       name="title"
-                      className={`form-input w-full ${
-                        productFormik.touched.title && productFormik.errors.title ? 'border-red-500' : 'border-slate-200'
-                      }`}
+                      className={`form-input w-full ${productFormik.touched.title && productFormik.errors.title ? 'border-red-500' : 'border-slate-200'
+                        }`}
                       placeholder="Tên sản phẩm"
                       value={productFormik.values.title}
                       onChange={productFormik.handleChange}
@@ -825,7 +829,7 @@ export default function AddNew() {
                       apiKey="8wmapg650a8xkqj2cwz4qgka67mscn8xm3uaijvcyoh70b1g"
                       init={editorConfig}
                       value={productFormik.values.description}
-                      onEditorChange={(content : any) => {
+                      onEditorChange={(content: any) => {
                         productFormik.setFieldValue('description', content);
                       }}
                       onBlur={() => productFormik.setFieldTouched('description', true)}
@@ -884,9 +888,8 @@ export default function AddNew() {
                         type="text"
                         id="price"
                         name="price"
-                        className={`form-input w-full ${
-                          productFormik.touched.price && productFormik.errors.price ? 'border-red-500' : 'border-slate-200'
-                        }`}
+                        className={`form-input w-full ${productFormik.touched.price && productFormik.errors.price ? 'border-red-500' : 'border-slate-200'
+                          }`}
                         placeholder="0"
                         value={formatPrice(productFormik.values.price.toString())}
                         onChange={(e) => handlePriceChange(e, 'price')}
@@ -941,7 +944,7 @@ export default function AddNew() {
                         name="skinType"
                         id="skinType"
                         placeholder="Chọn loại da..."
-                        value={skinTypeOptions.filter(option => 
+                        value={skinTypeOptions.filter(option =>
                           productFormik.values.skinType.includes(option.value)
                         )}
                         onChange={(selectedOptions) => {
@@ -969,7 +972,7 @@ export default function AddNew() {
                       <Plus className="size-4 mr-2" /> Thêm Biến Thể
                     </button>
                   </div>
-                  
+
                   {variations.length === 0 && (
                     <div className="p-4 text-center border border-dashed rounded-lg">
                       <p className="text-slate-500">
@@ -977,7 +980,7 @@ export default function AddNew() {
                       </p>
                     </div>
                   )}
-                  
+
                   {variations.map((variation, index) => (
                     <div key={index} className="p-4 mb-4 border rounded-lg bg-white shadow-sm">
                       <div className="flex justify-between items-center mb-3">
@@ -990,7 +993,7 @@ export default function AddNew() {
                           <Trash2 className="size-4" />
                         </button>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                         <div>
                           <label className="inline-block mb-2 text-sm font-medium">
@@ -1010,12 +1013,12 @@ export default function AddNew() {
                                 value: v.id,
                                 label: v.name
                               }))[0]}
-                            onChange={(option) => 
+                            onChange={(option) =>
                               updateVariation(index, 'id', option?.value || "")
                             }
                           />
                         </div>
-                        
+
                         <div>
                           <label className="inline-block mb-2 text-sm font-medium">
                             Tùy Chọn Biến Thể <span className="text-red-500">*</span>
@@ -1069,7 +1072,7 @@ export default function AddNew() {
                       </button>
                     </div>
                   </div>
-                  
+
                   {productItems.length === 0 && (
                     <div className="p-4 text-center border border-dashed rounded-lg">
                       <p className="text-slate-500">
@@ -1090,7 +1093,7 @@ export default function AddNew() {
                           <Trash2 className="size-4" />
                         </button>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                         {/* Show only one field per variation option */}
                         {item.variationOptionIds.map((optionId, optIndex) => {
@@ -1198,18 +1201,17 @@ export default function AddNew() {
                           maxSize={2 * 1024 * 1024} // 2MB
                         >
                           {({ getRootProps, getInputProps }) => (
-                            <div 
-                              {...getRootProps()} 
-                              className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-slate-50 ${
-                                productItemErrors[index]?.image ? 'border-red-500' : 'border-slate-200'
-                              }`}
+                            <div
+                              {...getRootProps()}
+                              className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-slate-50 ${productItemErrors[index]?.image ? 'border-red-500' : 'border-slate-200'
+                                }`}
                             >
                               <input {...getInputProps()} />
                               {productItemImages[index] ? (
                                 <div className="relative">
-                                  <img 
-                                    src={productItemImages[index]?.preview} 
-                                    alt="Preview" 
+                                  <img
+                                    src={productItemImages[index]?.preview}
+                                    alt="Preview"
                                     className="mx-auto h-32 object-contain"
                                   />
                                   <p className="mt-2 text-sm text-slate-500">
@@ -1261,7 +1263,7 @@ export default function AddNew() {
                         apiKey="8wmapg650a8xkqj2cwz4qgka67mscn8xm3uaijvcyoh70b1g"
                         init={editorConfig}
                         value={productFormik.values.detailedIngredients}
-                        onEditorChange={(content : any) => {
+                        onEditorChange={(content: any) => {
                           productFormik.setFieldValue('detailedIngredients', content);
                         }}
                         onBlur={() => productFormik.setFieldTouched('detailedIngredients', true)}
@@ -1279,9 +1281,8 @@ export default function AddNew() {
                         type="text"
                         id="mainFunction"
                         name="mainFunction"
-                        className={`form-input w-full ${
-                          productFormik.touched.mainFunction && productFormik.errors.mainFunction ? 'border-red-500' : 'border-slate-200'
-                        }`}
+                        className={`form-input w-full ${productFormik.touched.mainFunction && productFormik.errors.mainFunction ? 'border-red-500' : 'border-slate-200'
+                          }`}
                         placeholder="Nhập chức năng chính"
                         value={productFormik.values.mainFunction}
                         onChange={productFormik.handleChange}
@@ -1300,9 +1301,8 @@ export default function AddNew() {
                         type="text"
                         id="texture"
                         name="texture"
-                        className={`form-input border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800 placeholder:text-slate-400 dark:placeholder:text-zink-200 ${
-                          productFormik.touched.texture && productFormik.errors.texture ? "border-red-500" : ""
-                        }`}
+                        className={`form-input border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800 placeholder:text-slate-400 dark:placeholder:text-zink-200 ${productFormik.touched.texture && productFormik.errors.texture ? "border-red-500" : ""
+                          }`}
                         placeholder="Nhập kết cấu sản phẩm"
                         onChange={productFormik.handleChange}
                         onBlur={productFormik.handleBlur}
@@ -1336,9 +1336,8 @@ export default function AddNew() {
                         type="text"
                         id="keyActiveIngredients"
                         name="keyActiveIngredients"
-                        className={`form-input w-full ${
-                          productFormik.touched.keyActiveIngredients && productFormik.errors.keyActiveIngredients ? 'border-red-500' : 'border-slate-200'
-                        }`}
+                        className={`form-input w-full ${productFormik.touched.keyActiveIngredients && productFormik.errors.keyActiveIngredients ? 'border-red-500' : 'border-slate-200'
+                          }`}
                         placeholder="Nhập thành phần chính"
                         value={productFormik.values.keyActiveIngredients}
                         onChange={productFormik.handleChange}
@@ -1358,7 +1357,7 @@ export default function AddNew() {
                         apiKey="8wmapg650a8xkqj2cwz4qgka67mscn8xm3uaijvcyoh70b1g"
                         init={editorConfig}
                         value={productFormik.values.storageInstruction}
-                        onEditorChange={(content : any) => {
+                        onEditorChange={(content: any) => {
                           productFormik.setFieldValue('storageInstruction', content);
                         }}
                         onBlur={() => productFormik.setFieldTouched('storageInstruction', true)}
@@ -1377,7 +1376,7 @@ export default function AddNew() {
                         apiKey="8wmapg650a8xkqj2cwz4qgka67mscn8xm3uaijvcyoh70b1g"
                         init={editorConfig}
                         value={productFormik.values.usageInstruction}
-                        onEditorChange={(content : any) => {
+                        onEditorChange={(content: any) => {
                           productFormik.setFieldValue('usageInstruction', content);
                         }}
                         onBlur={() => productFormik.setFieldTouched('usageInstruction', true)}
@@ -1395,9 +1394,8 @@ export default function AddNew() {
                         type="text"
                         id="expiryDate"
                         name="expiryDate"
-                        className={`form-input w-full ${
-                          productFormik.touched.expiryDate && productFormik.errors.expiryDate ? 'border-red-500' : 'border-slate-200'
-                        }`}
+                        className={`form-input w-full ${productFormik.touched.expiryDate && productFormik.errors.expiryDate ? 'border-red-500' : 'border-slate-200'
+                          }`}
                         placeholder="Nhập ngày hạn sử dụng (ví dụ: 2 months)"
                         value={productFormik.values.expiryDate}
                         onChange={productFormik.handleChange}
@@ -1416,9 +1414,8 @@ export default function AddNew() {
                         type="text"
                         id="skinIssues"
                         name="skinIssues"
-                        className={`form-input w-full ${
-                          productFormik.touched.skinIssues && productFormik.errors.skinIssues ? 'border-red-500' : 'border-slate-200'
-                        }`}
+                        className={`form-input w-full ${productFormik.touched.skinIssues && productFormik.errors.skinIssues ? 'border-red-500' : 'border-slate-200'
+                          }`}
                         placeholder="Nhập vấn đề da mà sản phẩm giải quyết"
                         value={productFormik.values.skinIssues}
                         onChange={productFormik.handleChange}
@@ -1436,9 +1433,9 @@ export default function AddNew() {
                     type="button"
                     onClick={() => {
                       productFormik.resetForm();
-                      setProductImage(null);
+                      setProductImages([]);
                       setProductItems([]);
-                      setVariations([{id: "", variationOptionIds: []}]);
+                      setVariations([{ id: "", variationOptionIds: [] }]);
                     }}
                     className="text-red-500 bg-white btn hover:text-red-500 hover:bg-red-100 focus:text-red-500 focus:bg-red-100"
                   >
