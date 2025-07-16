@@ -346,11 +346,7 @@ export default function AddNew() {
     },
     validationSchema: Yup.object({
       title: Yup.string()
-        .required('Tên sản phẩm là bắt buộc')
-        .matches(
-          /^[a-zA-Z0-9\s\u00C0-\u1EF9]+$/,
-          'Tên sản phẩm không được chứa ký tự đặc biệt'
-        ),
+        .required('Tên sản phẩm là bắt buộc'),
       brand: Yup.string().required('Thương hiệu là bắt buộc'),
       category: Yup.string().required('Danh mục là bắt buộc'),
       price: Yup.number().required('Giá là bắt buộc').min(0, 'Giá phải là số dương'),
@@ -359,36 +355,16 @@ export default function AddNew() {
       description: Yup.string().required('Mô tả là bắt buộc'),
       detailedIngredients: Yup.string().required('Thành phần chi tiết là bắt buộc'),
       mainFunction: Yup.string()
-        .required('Chức năng chính là bắt buộc')
-        .matches(
-          /^[a-zA-Z0-9\s\u00C0-\u1EF9.,]+$/,
-          'Không được chứa ký tự đặc biệt'
-        ),
+        .required('Chức năng chính là bắt buộc'),
       texture: Yup.string()
-        .required('Kết cấu là bắt buộc')
-        .matches(
-          /^[a-zA-Z0-9\s\u00C0-\u1EF9.,]+$/,
-          'Không được chứa ký tự đặc biệt'
-        ),
-      englishName: Yup.string()
-        .matches(
-          /^[a-zA-Z0-9\s.,]*$/,
-          'Không được chứa ký tự đặc biệt'
-        ),
+        .required('Kết cấu là bắt buộc'),
+      englishName: Yup.string(),
       keyActiveIngredients: Yup.string()
-        .required('Thành phần chính là bắt buộc')
-        .matches(
-          /^[a-zA-Z0-9\s\u00C0-\u1EF9.,]+$/,
-          'Không được chứa ký tự đặc biệt'
-        ),
+        .required('Thành phần chính là bắt buộc'),
       storageInstruction: Yup.string().required('Hướng dẫn lưu trữ là bắt buộc'),
       usageInstruction: Yup.string().required('Hướng dẫn sử dụng là bắt buộc'),
       expiryDate: Yup.string()
-        .required('Ngày hạn sử dụng là bắt buộc')
-        .matches(
-          /^[a-zA-Z0-9\s\u00C0-\u1EF9.,]+$/,
-          'Không được chứa ký tự đặc biệt'
-        ),
+        .required('Ngày hạn sử dụng là bắt buộc'),
       skinIssues: Yup.string()
         .required('Vấn đề da là bắt buộc')
         .matches(

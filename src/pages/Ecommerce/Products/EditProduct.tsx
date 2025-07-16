@@ -77,10 +77,10 @@ export default function EditProduct() {
   const dispatch = useDispatch<any>();
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   // Get product ID from URL query parameter
   const productId = new URLSearchParams(location.search).get('id');
-  
+
   // Create selector for product data
   const productSelector = createSelector(
     (state: any) => state.product,
@@ -90,16 +90,16 @@ export default function EditProduct() {
       error: product?.error || null,
     })
   );
-  
+
   const { productData, loading } = useSelector(productSelector);
-  
+
   // Fetch product data when component mounts
   useEffect(() => {
     if (productId) {
       dispatch(getProductById(productId));
     }
   }, [dispatch, productId]);
-  
+
   // Handle form initialization separately
   useEffect(() => {
     if (productData && !loading) {
@@ -129,7 +129,7 @@ export default function EditProduct() {
         visibility: productData.visibility || 'Public',
         tags: productData.tags?.join(', ') || ''
       });
-      
+
       // Set thumbnail if available
       if (productData.thumbnail) {
         setThumbnail({
@@ -143,7 +143,7 @@ export default function EditProduct() {
           file: null,
           formattedSize: "Existing image"
         });
-        
+
         // Set additional product images if available
         if (productData.productImageUrls.length > 1) {
           const additionalImages = productData.productImageUrls.slice(1).map((url: string) => ({
@@ -154,7 +154,7 @@ export default function EditProduct() {
           setProductImages(additionalImages);
         }
       }
-      
+
       // Initialize variations from productData
       if (productData.variations && productData.variations.length > 0) {
         console.log("Setting variations from product data:", productData.variations);
@@ -173,7 +173,7 @@ export default function EditProduct() {
           variationOptionIds: []
         }]);
       }
-      
+
       // Initialize product items from variationCombinations
       if (productData.variationCombinations && productData.variationCombinations.length > 0) {
         const items = productData.variationCombinations.map((item: any, index: number) => {
@@ -189,7 +189,7 @@ export default function EditProduct() {
               } as ProductImage
             }));
           }
-          
+
           return {
             id: item.id || `temp-${index}`,
             variationOptionIds: item.variationOptionIds || [],
@@ -200,7 +200,7 @@ export default function EditProduct() {
             imageUrl: item.imageUrl || ""
           };
         });
-        
+
         setProductItems(items);
       } else {
         // Initialize with an empty product item
@@ -216,7 +216,7 @@ export default function EditProduct() {
   }, [productData, loading]);
 
   const [availableVariations, setAvailableVariations] = useState<Variation[]>([]);
-  
+
   // Now the useEffect that depends on availableVariations
   useEffect(() => {
     if (productData && !loading && availableVariations.length > 0) {
@@ -224,14 +224,14 @@ export default function EditProduct() {
       if (productData.productItems && productData.productItems.length > 0) {
         // Get the first product item to extract variation info
         const firstItem = productData.productItems[0];
-        
+
         if (firstItem.configurations && firstItem.configurations.length > 0) {
           // Extract variation info from the first configuration
           const config = firstItem.configurations[0];
-          
+
           // Find the variation in available variations
           const matchingVariation = availableVariations.find(v => v.name === config.variationName);
-          
+
           if (matchingVariation) {
             // Set up a single variation with the matching option
             setProductVariations([{
@@ -241,7 +241,7 @@ export default function EditProduct() {
             }]);
           }
         }
-        
+
         // Set up product items
         const items = productData.productItems.map((item: any) => {
           // Create an entry in productItemImages for existing images
@@ -256,11 +256,11 @@ export default function EditProduct() {
               } as ProductImage
             }));
           }
-          
+
           // Extract variation option IDs from configurations
-          const variationOptionIds = item.configurations ? 
+          const variationOptionIds = item.configurations ?
             item.configurations.map((config: any) => config.optionId) : [];
-          
+
           return {
             id: item.id,
             variationOptionIds,
@@ -271,7 +271,7 @@ export default function EditProduct() {
             imageUrl: item.imageUrl || ""
           };
         });
-        
+
         setProductItems(items);
       }
     }
@@ -310,7 +310,7 @@ export default function EditProduct() {
       preview: URL.createObjectURL(file),
       formattedSize: formatBytes(file.size),
     }));
-    setProductImages([...productImages, ...newImages].slice(0, 3)); // Limit to 3 images
+    setProductImages([...productImages, ...newImages]);
   };
 
   const removeProductImage = (index: number) => {
@@ -380,7 +380,7 @@ export default function EditProduct() {
       // Fetch variations
       const variationsResponse = await axios.get("https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/variations");
       console.log("Variations response:", variationsResponse.data);
-      
+
       let variationsData = [];
       if (variationsResponse.data && variationsResponse.data.success && variationsResponse.data.data && variationsResponse.data.data.items) {
         variationsData = variationsResponse.data.data.items;
@@ -389,18 +389,18 @@ export default function EditProduct() {
       } else {
         console.error("Unexpected variations response structure:", variationsResponse.data);
       }
-      
+
       // If variations don't have options, we might need to fetch them separately
       const variationsWithOptions = await Promise.all(variationsData.map(async (variation: any) => {
         // If variation already has options, use them
         if (variation.variationOptions && variation.variationOptions.length > 0) {
           return variation;
         }
-        
+
         // Otherwise, try to fetch options separately (if your API supports this)
         try {
           const optionsResponse = await axios.get(`https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/variations/${variation.id}`);
-          
+
           if (optionsResponse.data && optionsResponse.data.variationOptions) {
             return {
               ...variation,
@@ -410,17 +410,17 @@ export default function EditProduct() {
         } catch (error) {
           console.warn(`Could not fetch options for variation ${variation.id}:`, error);
         }
-        
+
         // If we couldn't fetch options, return variation with empty options
         return {
           ...variation,
           variationOptions: []
         };
       }));
-      
+
       console.log("Variations with options:", variationsWithOptions);
       setAvailableVariations(variationsWithOptions);
-      
+
     } catch (error) {
       console.error("Error fetching options:", error);
       setErrorMessage("Failed to load form options. Please refresh the page.");
@@ -439,7 +439,7 @@ export default function EditProduct() {
         quantityInStock: 0
       }
     ]);
-    
+
     // Also initialize the image state
     setProductItemImages({
       ...productItemImages,
@@ -461,7 +461,7 @@ export default function EditProduct() {
     const updatedItems = [...productItems];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
     setProductItems(updatedItems);
-    
+
     // Validate the updated item
     const errors = validateProductItem(updatedItems[index], index);
     setProductItemErrors({
@@ -482,10 +482,10 @@ export default function EditProduct() {
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
     const formattedValue = formatPrice(e.target.value);
     const numericValue = formattedValue.replace(/\s/g, '');
-    
+
     // Update the display value with formatting
     e.target.value = formattedValue;
-    
+
     // Update formik with numeric value
     productFormik.setFieldValue(fieldName, numericValue);
   };
@@ -506,7 +506,7 @@ export default function EditProduct() {
   // Update the updateVariation function to properly handle variationOptionIds
   const updateVariation = (index: number, field: string, value: any) => {
     const newVariations = [...variations];
-    
+
     if (field === 'id') {
       // When changing variation type, reset options
       newVariations[index] = {
@@ -528,7 +528,7 @@ export default function EditProduct() {
         variationOptionIds: value
       };
     }
-    
+
     setVariations(newVariations);
   }
 
@@ -546,12 +546,12 @@ export default function EditProduct() {
       const file = acceptedFiles[0];
       const formattedSize = formatBytes(file.size);
       const preview = URL.createObjectURL(file);
-      
+
       console.log("Image uploaded:", { file, preview, formattedSize });
-      
+
       // Find the item ID or use a temporary ID
       const itemId = productItems[index]?.id || `temp-${index}`;
-      
+
       // Update the productItemImages state
       setProductItemImages(prev => ({
         ...prev,
@@ -561,12 +561,12 @@ export default function EditProduct() {
           formattedSize
         }
       }));
-      
+
       // Update the product item with the file info
       const updatedItems = [...productItems];
-      updatedItems[index] = { 
-        ...updatedItems[index], 
-        imageFile: file 
+      updatedItems[index] = {
+        ...updatedItems[index],
+        imageFile: file
       };
       setProductItems(updatedItems);
     }
@@ -576,10 +576,10 @@ export default function EditProduct() {
   const removeProductItemImage = (index: number) => {
     // Create a copy of the current productItemImages
     const updatedImages = { ...productItemImages };
-    
+
     // Get the item ID or use the index as fallback
     const itemId = productItems[index]?.id || `temp-${index}`;
-    
+
     // If there's an image for this item, remove it
     if (updatedImages[itemId]) {
       // Revoke the object URL to prevent memory leaks
@@ -590,11 +590,11 @@ export default function EditProduct() {
       delete updatedImages[itemId];
       setProductItemImages(updatedImages);
     }
-    
+
     // Also clear the imageUrl and imageFile from the product item
     const updatedItems = [...productItems];
-    updatedItems[index] = { 
-      ...updatedItems[index], 
+    updatedItems[index] = {
+      ...updatedItems[index],
       imageUrl: "",
       imageFile: undefined
     };
@@ -604,47 +604,47 @@ export default function EditProduct() {
   // Update the validateProductItem function to validate quantity properly
   const validateProductItem = (item: any, index: number) => {
     const errors: { [key: string]: string } = {};
-    
+
     // Validate quantity
     if (item.quantityInStock === undefined || item.quantityInStock === null) {
       errors.quantityInStock = "Vui lòng nhập số lượng";
     } else if (item.quantityInStock < 0) {
       errors.quantityInStock = "Số lượng không thể là số âm";
     }
-    
+
     // Validate price
     if (item.price === undefined || item.price === null || item.price === 0) {
       errors.price = "Vui lòng nhập giá";
     } else if (item.price < 0) {
       errors.price = "Giá không thể là số âm";
     }
-    
+
     // Validate market price
     if (item.marketPrice === undefined || item.marketPrice === null || item.marketPrice === 0) {
       errors.marketPrice = "Vui lòng nhập giá thị trường";
     } else if (item.marketPrice < 0) {
       errors.marketPrice = "Giá thị trường không thể là số âm";
     }
-    
+
     // Validate purchase price
     if (item.purchasePrice === undefined || item.purchasePrice === null || item.purchasePrice === 0) {
       errors.purchasePrice = "Vui lòng nhập giá nhập";
     } else if (item.purchasePrice < 0) {
       errors.purchasePrice = "Giá nhập không thể là số âm";
     }
-    
+
     // Validate image
     const itemId = item.id || `temp-${index}`;
-    const hasImage = 
-      item.imageUrl || 
-      (productItemImages[itemId] && productItemImages[itemId]?.file) || 
-      (productItemImages[itemId] && productItemImages[itemId]?.preview) || 
+    const hasImage =
+      item.imageUrl ||
+      (productItemImages[itemId] && productItemImages[itemId]?.file) ||
+      (productItemImages[itemId] && productItemImages[itemId]?.preview) ||
       item.imageFile;
-      
+
     if (!hasImage) {
       errors.image = "Vui lòng tải lên hình ảnh sản phẩm";
     }
-    
+
     return errors;
   };
 
@@ -659,16 +659,16 @@ export default function EditProduct() {
         allSelectedVariationOptions.push(...optionIds);
       }
     });
-    
+
     // Update all product items to use the selected variation options
     if (productItems.length > 0 && allSelectedVariationOptions.length > 0) {
       const updatedItems = productItems.map(item => ({
         ...item,
         variationOptionIds: allSelectedVariationOptions
       }));
-      
+
       setProductItems(updatedItems);
-      
+
       // Validate all updated items
       const newErrors: { [key: number]: { [key: string]: string } } = {};
       updatedItems.forEach((item, index) => {
@@ -677,7 +677,7 @@ export default function EditProduct() {
           newErrors[index] = errors;
         }
       });
-      
+
       setProductItemErrors(newErrors);
     }
   }, [variations]);
@@ -711,8 +711,7 @@ export default function EditProduct() {
     },
     validationSchema: Yup.object({
       title: Yup.string()
-        .required("Vui lòng nhập tên sản phẩm")
-        .matches(/^[a-zA-Z0-9\s\u00C0-\u1EF9]+$/, "Không được chứa ký tự đặc biệt"),
+        .required("Vui lòng nhập tên sản phẩm"),
       brand: Yup.string().required("Vui lòng chọn thương hiệu"),
       category: Yup.string().required("Vui lòng chọn danh mục"),
       price: Yup.number()
@@ -726,25 +725,19 @@ export default function EditProduct() {
       description: Yup.string().required("Vui lòng nhập mô tả sản phẩm"),
       detailedIngredients: Yup.string().required("Vui lòng nhập thành phần chi tiết"),
       mainFunction: Yup.string()
-        .required("Vui lòng nhập chức năng chính")
-        .matches(/^[a-zA-Z0-9\s\u00C0-\u1EF9]+$/, "Không được chứa ký tự đặc biệt"),
+        .required("Vui lòng nhập chức năng chính"),
       texture: Yup.string()
-        .required("Vui lòng nhập kết cấu")
-        .matches(/^[a-zA-Z0-9\s\u00C0-\u1EF9]+$/, "Không được chứa ký tự đặc biệt"),
+        .required("Vui lòng nhập kết cấu"),
       englishName: Yup.string()
-        .required("Vui lòng nhập tên tiếng Anh")
-        .matches(/^[a-zA-Z0-9\s]+$/, "Chỉ được chứa chữ cái, số và khoảng trắng"),
+        .required("Vui lòng nhập tên tiếng Anh"),
       keyActiveIngredients: Yup.string()
-        .required("Vui lòng nhập thành phần hoạt chất chính")
-        .matches(/^[a-zA-Z0-9\s\u00C0-\u1EF9]+$/, "Không được chứa ký tự đặc biệt"),
+        .required("Vui lòng nhập thành phần hoạt chất chính"),
       storageInstruction: Yup.string().required("Vui lòng nhập hướng dẫn bảo quản"),
       usageInstruction: Yup.string().required("Vui lòng nhập hướng dẫn sử dụng"),
       expiryDate: Yup.string()
-        .required("Vui lòng nhập hạn sử dụng")
-        .matches(/^[a-zA-Z0-9\s\/]+$/, "Chỉ được chứa chữ cái, số, dấu / và khoảng trắng"),
+        .required("Vui lòng nhập hạn sử dụng"),
       skinIssues: Yup.string()
-        .required("Vui lòng nhập vấn đề về da")
-        .matches(/^[a-zA-Z0-9\s\u00C0-\u1EF9]+$/, "Không được chứa ký tự đặc biệt"),
+        .required("Vui lòng nhập vấn đề về da"),
       status: Yup.string().required("Vui lòng chọn trạng thái"),
       visibility: Yup.string().required("Vui lòng chọn hiển thị"),
     }),
@@ -752,17 +745,17 @@ export default function EditProduct() {
       try {
         console.log("Form submission started with values:", productFormik.values);
         console.log("Product items:", productItems);
-        
+
         // Validate all product items
         let hasProductItemErrors = false;
         const allProductItemErrors: { [key: number]: { [key: string]: string } } = {};
-        
+
         if (productItems.length === 0) {
           setErrorMessage("At least one product item is required");
           console.error("Validation failed: No product items");
           return;
         }
-        
+
         productItems.forEach((item, index) => {
           const errors = validateProductItem(item, index);
           if (Object.keys(errors).length > 0) {
@@ -771,20 +764,20 @@ export default function EditProduct() {
             console.error(`Validation errors for item #${index + 1}:`, errors);
           }
         });
-        
+
         if (hasProductItemErrors) {
           setProductItemErrors(allProductItemErrors);
           setErrorMessage("Please fix all errors in product items");
           return;
         }
-        
+
         setIsSubmitting(true);
         setErrorMessage("");
-        
+
         // Get Firebase backend instance
         const firebaseBackend = getFirebaseBackend();
         console.log("Firebase backend initialized");
-        
+
         // Upload thumbnail if exists
         let thumbnailUrl = "";
         if (thumbnail?.file) {
@@ -802,7 +795,7 @@ export default function EditProduct() {
           // Use existing preview if available
           thumbnailUrl = thumbnail.preview;
         }
-        
+
         // Upload product images if exist
         let productImageUrls: string[] = [];
         if (productImages.length > 0) {
@@ -812,20 +805,20 @@ export default function EditProduct() {
             const existingUrls = productImages
               .filter(image => !image.file && image.preview)
               .map(image => image.preview);
-            
+
             // Upload new files
             if (imageFiles.length > 0) {
-              const uploadPromises = imageFiles.map(file => 
+              const uploadPromises = imageFiles.map(file =>
                 firebaseBackend.uploadFileWithDirectory(file, "SPSS/Product-Images")
               );
-              
+
               // Wait for all uploads to complete
               const uploadedUrls = await Promise.all(uploadPromises);
               productImageUrls = [...existingUrls, ...uploadedUrls];
             } else {
               productImageUrls = existingUrls;
             }
-            
+
             console.log("Product images processed successfully:", productImageUrls);
           } catch (uploadError) {
             console.error("Error uploading product images:", uploadError);
@@ -834,32 +827,32 @@ export default function EditProduct() {
             return;
           }
         }
-        
+
         // Combine all image URLs - ensure thumbnail is first if it exists
         const allProductImageUrls = [];
-        
+
         // Add thumbnail if exists
         if (thumbnailUrl) {
           allProductImageUrls.push(thumbnailUrl);
         }
-        
+
         // Add all product images
         if (productImageUrls.length > 0) {
           allProductImageUrls.push(...productImageUrls);
         }
-        
+
         // Upload product item images and prepare variation combinations
         const variationCombinations = await Promise.all(productItems.map(async (item, index) => {
           let imageUrl = item.imageUrl || "";
-          
+
           // Get the item ID or use a temporary ID
           const itemId = item.id || `temp-${index}`;
-          
+
           // If there's an image file for this item, upload it
           if (productItemImages[itemId]?.file) {
             try {
               imageUrl = await firebaseBackend.uploadFileWithDirectory(
-                productItemImages[itemId]!.file, 
+                productItemImages[itemId]!.file,
                 "SPSS/Product-Item-Images"
               );
             } catch (uploadError) {
@@ -867,7 +860,7 @@ export default function EditProduct() {
               throw new Error(`Failed to upload image for product item #${index + 1}`);
             }
           }
-          
+
           return {
             variationOptionIds: item.variationOptionIds || [],
             imageUrl: imageUrl,
@@ -877,16 +870,16 @@ export default function EditProduct() {
             quantityInStock: parseInt(item.quantityInStock.toString())
           };
         }));
-        
+
         // Prepare variations data
         const variationsData = variations.map(v => ({
           id: v.id,
           variationOptionIds: v.variationOptionIds || []
         }));
-        
+
         // Get values from formik
         const values = productFormik.values;
-        
+
         // Prepare data for API submission
         const updateProductData = {
           id: productId,
@@ -912,9 +905,9 @@ export default function EditProduct() {
             skinIssues: values.skinIssues
           }
         };
-        
+
         console.log("Prepared product data for submission:", updateProductData);
-        
+
         // Make API call to update the product
         const response = await axios.patch(
           `https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/products/${productId}`,
@@ -925,9 +918,9 @@ export default function EditProduct() {
             }
           }
         );
-        
+
         console.log("API response:", response.data);
-        
+
         // Show success toast notification
         toast.success("Sản phẩm đã được cập nhật thành công!", {
           position: "top-right",
@@ -938,17 +931,17 @@ export default function EditProduct() {
           draggable: true,
           progress: undefined,
         });
-        
+
         // Wait for toast to be visible before redirecting
         setTimeout(() => {
           navigate('/apps-ecommerce-product-list');
         }, 2000);
-        
+
       } catch (error: any) {
         console.error("Error updating product:", error);
         const errorMessage = error.response?.data?.message || error.message || "Không thể cập nhật sản phẩm. Vui lòng thử lại.";
         setErrorMessage(errorMessage);
-        
+
         // Show error toast
         toast.error(errorMessage, {
           position: "top-right",
@@ -991,20 +984,20 @@ export default function EditProduct() {
   const hasFormErrors = () => {
     // Check formik errors
     const formikErrors = Object.keys(productFormik.errors).length > 0;
-    
+
     // Check if any fields are touched and have errors
     const touchedErrors = Object.entries(productFormik.touched).some(
       ([key, isTouched]) => isTouched && key in productFormik.errors
     );
-    
+
     // Check product item errors
     const itemErrors = Object.values(productItemErrors).some(
       errors => Object.keys(errors).length > 0
     );
-    
+
     // Check if there are no product items
     const noItems = productItems.length === 0;
-    
+
     return formikErrors || touchedErrors || itemErrors || noItems;
   };
 
@@ -1021,10 +1014,10 @@ export default function EditProduct() {
       toast.error("Vui lòng chọn đầy đủ biến thể và tùy chọn trước khi tạo sản phẩm");
       return;
     }
-    
+
     // Generate all possible combinations of variation options
     let combinations: string[][] = [[]];
-    
+
     variations.forEach(variation => {
       const newCombinations: string[][] = [];
       variation.variationOptionIds.forEach(optionId => {
@@ -1034,7 +1027,7 @@ export default function EditProduct() {
       });
       combinations = newCombinations;
     });
-    
+
     // Create product items from combinations
     const newProductItems = combinations.map(combo => ({
       variationOptionIds: combo,
@@ -1043,7 +1036,7 @@ export default function EditProduct() {
       purchasePrice: 0,
       quantityInStock: 0
     }));
-    
+
     setProductItems(newProductItems);
   };
 
@@ -1051,11 +1044,11 @@ export default function EditProduct() {
   const handleUpdateProduct = async () => {
     try {
       setIsSubmitting(true);
-      
+
       // Get Firebase backend instance
       const firebaseBackend = getFirebaseBackend();
       console.log("Firebase backend initialized");
-      
+
       // Upload thumbnail if exists
       let thumbnailUrl = "";
       if (thumbnail?.file) {
@@ -1073,7 +1066,7 @@ export default function EditProduct() {
         // Use existing preview if available
         thumbnailUrl = thumbnail.preview;
       }
-      
+
       // Upload product images if exist
       let productImageUrls: string[] = [];
       if (productImages.length > 0) {
@@ -1083,20 +1076,20 @@ export default function EditProduct() {
           const existingUrls = productImages
             .filter(image => !image.file && image.preview)
             .map(image => image.preview);
-          
+
           // Upload new files
           if (imageFiles.length > 0) {
-            const uploadPromises = imageFiles.map(file => 
+            const uploadPromises = imageFiles.map(file =>
               firebaseBackend.uploadFileWithDirectory(file, "SPSS/Product-Images")
             );
-            
+
             // Wait for all uploads to complete
             const uploadedUrls = await Promise.all(uploadPromises);
             productImageUrls = [...existingUrls, ...uploadedUrls];
           } else {
             productImageUrls = existingUrls;
           }
-          
+
           console.log("Product images processed successfully:", productImageUrls);
         } catch (uploadError) {
           console.error("Error uploading product images:", uploadError);
@@ -1105,32 +1098,32 @@ export default function EditProduct() {
           return;
         }
       }
-      
+
       // Combine all image URLs - ensure thumbnail is first if it exists
       const allProductImageUrls = [];
-      
+
       // Add thumbnail if exists
       if (thumbnailUrl) {
         allProductImageUrls.push(thumbnailUrl);
       }
-      
+
       // Add all product images
       if (productImageUrls.length > 0) {
         allProductImageUrls.push(...productImageUrls);
       }
-      
+
       // Upload product item images and prepare variation combinations
       const variationCombinations = await Promise.all(productItems.map(async (item, index) => {
         let imageUrl = item.imageUrl || "";
-        
+
         // Get the item ID or use a temporary ID
         const itemId = item.id || `temp-${index}`;
-        
+
         // If there's an image file for this item, upload it
         if (productItemImages[itemId]?.file) {
           try {
             imageUrl = await firebaseBackend.uploadFileWithDirectory(
-              productItemImages[itemId]!.file, 
+              productItemImages[itemId]!.file,
               "SPSS/Product-Item-Images"
             );
           } catch (uploadError) {
@@ -1138,7 +1131,7 @@ export default function EditProduct() {
             throw new Error(`Failed to upload image for product item #${index + 1}`);
           }
         }
-        
+
         return {
           variationOptionIds: item.variationOptionIds || [],
           imageUrl: imageUrl,
@@ -1148,16 +1141,16 @@ export default function EditProduct() {
           quantityInStock: parseInt(item.quantityInStock.toString())
         };
       }));
-      
+
       // Prepare variations data
       const variationsData = variations.map(v => ({
         id: v.id,
         variationOptionIds: v.variationOptionIds || []
       }));
-      
+
       // Get values from formik
       const values = productFormik.values;
-      
+
       // Prepare data for API submission
       const updateProductData = {
         id: productId,
@@ -1183,9 +1176,9 @@ export default function EditProduct() {
           skinIssues: values.skinIssues
         }
       };
-      
+
       console.log("Prepared product data for submission:", updateProductData);
-      
+
       // Make API call to update the product
       const response = await axios.patch(
         `https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/products/${productId}`,
@@ -1196,9 +1189,9 @@ export default function EditProduct() {
           }
         }
       );
-      
+
       console.log("API response:", response.data);
-      
+
       // Show success toast notification
       toast.success("Sản phẩm đã được cập nhật thành công!", {
         position: "top-right",
@@ -1209,17 +1202,17 @@ export default function EditProduct() {
         draggable: true,
         progress: undefined,
       });
-      
+
       // Wait for toast to be visible before redirecting
       setTimeout(() => {
         navigate('/apps-ecommerce-product-list');
       }, 2000);
-      
+
     } catch (error: any) {
       console.error("Error updating product:", error);
       const errorMessage = error.response?.data?.message || error.message || "Không thể cập nhật sản phẩm. Vui lòng thử lại.";
       setErrorMessage(errorMessage);
-      
+
       // Show error toast
       toast.error(errorMessage, {
         position: "top-right",
@@ -1245,7 +1238,7 @@ export default function EditProduct() {
         // Ensure token is still valid in localStorage before navigation
         console.log("Auth token exists, proceeding with navigation");
       }
-      
+
       // Use navigate with replace option to avoid history stack issues
       navigate('/apps-ecommerce-product-list', { replace: true });
     } catch (error) {
@@ -1266,7 +1259,7 @@ export default function EditProduct() {
       draggable: true,
       progress: undefined,
     });
-    
+
     // Wait for toast to be visible before redirecting
     setTimeout(() => {
       // Use navigate with replace option
@@ -1276,7 +1269,7 @@ export default function EditProduct() {
 
   return (
     <React.Fragment>
-      <ToastContainer 
+      <ToastContainer
         position="top-right"
         autoClose={3000}
         hideProgressBar={false}
@@ -1288,7 +1281,7 @@ export default function EditProduct() {
         pauseOnHover
       />
       <BreadCrumb title={formTitle} pageTitle='Sản phẩm' />
-      
+
       {loading ? (
         <div className="flex items-center justify-center h-60">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -1299,14 +1292,14 @@ export default function EditProduct() {
             <div className="card">
               <div className="card-body">
                 <h6 className="mb-4 text-15">Chỉnh sửa sản phẩm</h6>
-                
+
                 {successMessage && (
                   <div className="p-4 mb-4 text-sm text-green-700 bg-green-100 rounded-lg">
                     {successMessage}
                   </div>
                 )}
-                
-                <form 
+
+                <form
                   onSubmit={(e) => {
                     e.preventDefault();
                     console.log("Form submitted");
@@ -1315,17 +1308,44 @@ export default function EditProduct() {
                   className="space-y-6"
                 >
                   <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-12 mb-5">
-                    {/* Product Thumbnail Section - Simplified */}
+                    {/* Product Image Section - Multiple Images */}
                     <div className="xl:col-span-12">
                       <label className="inline-block mb-2 text-base font-medium">
                         Hình ảnh sản phẩm
                       </label>
+
+                      {/* Display uploaded images */}
+                      {productImages.length > 0 && (
+                        <div className="mb-4 grid grid-cols-5 gap-4">
+                          {productImages.map((img, idx) => (
+                            <div key={idx} className="relative h-32 w-32 border rounded-md overflow-hidden">
+                              <img
+                                src={img.preview}
+                                alt={`Product Image ${idx + 1}`}
+                                className="h-full w-full object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeProductImage(idx)}
+                                className="absolute top-1 left-1 bg-red-500 text-white rounded-full p-1 size-5 flex items-center justify-center"
+                              >
+                                ×
+                              </button>
+                              <span className="absolute bottom-1 right-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
+                                {img.formattedSize}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Upload dropzone */}
                       <Dropzone
-                        onDrop={(acceptedFiles) => handleThumbnailUpload(acceptedFiles)}
-                        maxFiles={1}
+                        onDrop={(acceptedFiles) => handleProductImagesUpload(acceptedFiles)}
                         accept={{
                           "image/*": [".png", ".jpg", ".jpeg"],
                         }}
+                        maxFiles={5}
                       >
                         {({ getRootProps, getInputProps }) => (
                           <div
@@ -1334,28 +1354,13 @@ export default function EditProduct() {
                           >
                             <input {...getInputProps()} />
                             <div className="p-4 text-center">
-                              {thumbnail ? (
-                                <div className="relative">
-                                  <img
-                                    src={thumbnail.preview}
-                                    alt="Thumbnail"
-                                    className="h-32 mx-auto object-contain"
-                                  />
-                                  <p className="mt-2 text-sm text-slate-500">
-                                    {thumbnail.formattedSize || "Hình ảnh hiện tại"}
-                                  </p>
-                                </div>
-                              ) : (
-                                <>
-                                  <UploadCloud className="size-6 mx-auto mb-3" />
-                                  <h5 className="mb-1">
-                                    Kéo thả hình ảnh vào đây hoặc nhấp để tải lên.
-                                  </h5>
-                                  <p className="text-slate-500 dark:text-zink-200">
-                                    Kích thước tối đa: 2MB
-                                  </p>
-                                </>
-                              )}
+                              <UploadCloud className="size-6 mx-auto mb-3" />
+                              <h5 className="mb-1">
+                                Đặt hình ảnh vào đây hoặc nhấp để tải lên.
+                              </h5>
+                              <p className="text-slate-500 dark:text-zink-200">
+                                Kích thước tối đa: 2MB
+                              </p>
                             </div>
                           </div>
                         )}
@@ -1373,9 +1378,8 @@ export default function EditProduct() {
                         type="text"
                         id="title"
                         name="title"
-                        className={`form-input w-full ${
-                          productFormik.touched.title && productFormik.errors.title ? 'border-red-500' : 'border-slate-200'
-                        }`}
+                        className={`form-input w-full ${productFormik.touched.title && productFormik.errors.title ? 'border-red-500' : 'border-slate-200'
+                          }`}
                         placeholder="Nhập tên sản phẩm"
                         value={productFormik.values.title}
                         onChange={productFormik.handleChange}
@@ -1454,9 +1458,8 @@ export default function EditProduct() {
                           type="text"
                           id="price"
                           name="price"
-                          className={`form-input w-full ${
-                            productFormik.touched.price && productFormik.errors.price ? 'border-red-500' : 'border-slate-200'
-                          }`}
+                          className={`form-input w-full ${productFormik.touched.price && productFormik.errors.price ? 'border-red-500' : 'border-slate-200'
+                            }`}
                           placeholder="0"
                           value={formatPrice(productFormik.values.price.toString())}
                           onChange={(e) => handlePriceChange(e, 'price')}
@@ -1511,7 +1514,7 @@ export default function EditProduct() {
                           name="skinType"
                           id="skinType"
                           placeholder="Select skin types..."
-                          value={skinTypeOptions.filter(option => 
+                          value={skinTypeOptions.filter(option =>
                             productFormik.values.skinType.includes(option.value)
                           )}
                           onChange={(selectedOptions) => {
@@ -1535,7 +1538,7 @@ export default function EditProduct() {
                         <Plus className="size-4 mr-2" /> Thêm Biến Thể
                       </button>
                     </div>
-                    
+
                     {variations.length === 0 && (
                       <div className="p-4 text-center border border-dashed rounded-lg">
                         <p className="text-slate-500">
@@ -1543,7 +1546,7 @@ export default function EditProduct() {
                         </p>
                       </div>
                     )}
-                    
+
                     {variations.map((variation, index) => (
                       <div key={index} className="p-4 mb-4 border rounded-lg bg-white shadow-sm">
                         <div className="flex justify-between items-center mb-3">
@@ -1556,7 +1559,7 @@ export default function EditProduct() {
                             <Trash2 className="size-4" />
                           </button>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                           <div>
                             <label className="inline-block mb-2 text-sm font-medium">
@@ -1576,12 +1579,12 @@ export default function EditProduct() {
                                   value: v.id,
                                   label: v.name
                                 }))[0]}
-                              onChange={(option) => 
+                              onChange={(option) =>
                                 updateVariation(index, 'id', option?.value || "")
                               }
                             />
                           </div>
-                          
+
                           <div>
                             <label className="inline-block mb-2 text-sm font-medium">
                               Tùy Chọn Biến Thể <span className="text-red-500">*</span>
@@ -1633,7 +1636,7 @@ export default function EditProduct() {
                         Thêm Sản Phẩm
                       </button>
                     </div>
-                    
+
                     {productItems.length === 0 ? (
                       <div className="p-4 mb-4 text-sm text-blue-700 bg-blue-100 rounded-lg">
                         Vui lòng thêm ít nhất một sản phẩm.
@@ -1763,11 +1766,10 @@ export default function EditProduct() {
                               >
                                 {({ getRootProps, getInputProps }) => (
                                   <div
-                                    className={`border-2 border-dashed rounded-lg ${
-                                      productItemErrors[index]?.image 
-                                        ? 'border-red-500' 
-                                        : 'border-slate-200 dark:border-zink-500'
-                                    }`}
+                                    className={`border-2 border-dashed rounded-lg ${productItemErrors[index]?.image
+                                      ? 'border-red-500'
+                                      : 'border-slate-200 dark:border-zink-500'
+                                      }`}
                                     {...getRootProps()}
                                   >
                                     <input {...getInputProps()} />
@@ -1869,9 +1871,8 @@ export default function EditProduct() {
                           type="text"
                           id="mainFunction"
                           name="mainFunction"
-                          className={`form-input w-full ${
-                            productFormik.touched.mainFunction && productFormik.errors.mainFunction ? 'border-red-500' : 'border-slate-200'
-                          }`}
+                          className={`form-input w-full ${productFormik.touched.mainFunction && productFormik.errors.mainFunction ? 'border-red-500' : 'border-slate-200'
+                            }`}
                           placeholder="Nhập chức năng chính"
                           value={productFormik.values.mainFunction}
                           onChange={productFormik.handleChange}
@@ -1890,9 +1891,8 @@ export default function EditProduct() {
                           type="text"
                           id="texture"
                           name="texture"
-                          className={`form-input w-full ${
-                            productFormik.touched.texture && productFormik.errors.texture ? 'border-red-500' : 'border-slate-200'
-                          }`}
+                          className={`form-input w-full ${productFormik.touched.texture && productFormik.errors.texture ? 'border-red-500' : 'border-slate-200'
+                            }`}
                           placeholder="Nhập kết cấu sản phẩm"
                           value={productFormik.values.texture}
                           onChange={productFormik.handleChange}
@@ -1911,9 +1911,8 @@ export default function EditProduct() {
                           type="text"
                           id="englishName"
                           name="englishName"
-                          className={`form-input w-full ${
-                            productFormik.touched.englishName && productFormik.errors.englishName ? 'border-red-500' : 'border-slate-200'
-                          }`}
+                          className={`form-input w-full ${productFormik.touched.englishName && productFormik.errors.englishName ? 'border-red-500' : 'border-slate-200'
+                            }`}
                           placeholder="Nhập tên tiếng Anh"
                           value={productFormik.values.englishName}
                           onChange={productFormik.handleChange}
@@ -1932,9 +1931,8 @@ export default function EditProduct() {
                           type="text"
                           id="keyActiveIngredients"
                           name="keyActiveIngredients"
-                          className={`form-input w-full ${
-                            productFormik.touched.keyActiveIngredients && productFormik.errors.keyActiveIngredients ? 'border-red-500' : 'border-slate-200'
-                          }`}
+                          className={`form-input w-full ${productFormik.touched.keyActiveIngredients && productFormik.errors.keyActiveIngredients ? 'border-red-500' : 'border-slate-200'
+                            }`}
                           placeholder="Nhập thành phần hoạt chất chính"
                           value={productFormik.values.keyActiveIngredients}
                           onChange={productFormik.handleChange}
@@ -1991,9 +1989,8 @@ export default function EditProduct() {
                           type="text"
                           id="expiryDate"
                           name="expiryDate"
-                          className={`form-input w-full ${
-                            productFormik.touched.expiryDate && productFormik.errors.expiryDate ? 'border-red-500' : 'border-slate-200'
-                          }`}
+                          className={`form-input w-full ${productFormik.touched.expiryDate && productFormik.errors.expiryDate ? 'border-red-500' : 'border-slate-200'
+                            }`}
                           placeholder="Nhập hạn sử dụng (ví dụ: 12/2025)"
                           value={productFormik.values.expiryDate}
                           onChange={productFormik.handleChange}
@@ -2012,9 +2009,8 @@ export default function EditProduct() {
                           type="text"
                           id="skinIssues"
                           name="skinIssues"
-                          className={`form-input w-full ${
-                            productFormik.touched.skinIssues && productFormik.errors.skinIssues ? 'border-red-500' : 'border-slate-200'
-                          }`}
+                          className={`form-input w-full ${productFormik.touched.skinIssues && productFormik.errors.skinIssues ? 'border-red-500' : 'border-slate-200'
+                            }`}
                           placeholder="Nhập vấn đề về da mà sản phẩm này giải quyết"
                           value={productFormik.values.skinIssues}
                           onChange={productFormik.handleChange}
@@ -2035,7 +2031,7 @@ export default function EditProduct() {
                     >
                       Hủy
                     </button>
-                    
+
                     <button
                       type="button"
                       onClick={() => {
@@ -2043,11 +2039,10 @@ export default function EditProduct() {
                         handleUpdateProduct();
                       }}
                       disabled={isSubmitting}
-                      className={`text-white btn ${
-                        isSubmitting 
-                          ? 'bg-gray-400 cursor-not-allowed' 
-                          : 'bg-custom-500 hover:text-white hover:bg-custom-600 focus:text-white focus:bg-custom-600'
-                      }`}
+                      className={`text-white btn ${isSubmitting
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-custom-500 hover:text-white hover:bg-custom-600 focus:text-white focus:bg-custom-600'
+                        }`}
                     >
                       {isSubmitting ? (
                         <>
