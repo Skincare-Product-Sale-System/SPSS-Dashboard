@@ -486,6 +486,7 @@ export default function AddNew() {
             variationOptionIds: item.variationOptionIds,
             price: parseFloat(item.price.toString().replace(/\s/g, '')),
             marketPrice: parseFloat(item.marketPrice.toString().replace(/\s/g, '')),
+            purchasePrice: parseFloat(item.purchasePrice.toString().replace(/\s/g, '')),
             quantityInStock: parseInt(item.quantityInStock.toString()),
             imageUrl: item.imageUrl
           })),
