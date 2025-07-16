@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, Users } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, Users, Archive } from 'lucide-react';
 
 interface FinancialSummaryProps {
   data: {
@@ -7,10 +7,17 @@ interface FinancialSummaryProps {
     discountAmount: number;
     totalRevenue: number;
     totalProcurementCost: number;
+    inventoryProcurementCost: number;
     totalProfit: number;
     profitMargin: number;
     completedOrderCount: number;
     pendingOrderCount: number;
+    profitMarginPercent: number;
+    procurementCostPercent: number;
+    inventoryCostPercent: number;
+    completedOrderRate: number;
+    pendingOrderRate: number;
+    discountRate: number;
   };
 }
 
@@ -28,6 +35,19 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({ data }) => {
     return `${value.toFixed(1)}%`;
   };
 
+  // Helper function to determine trend direction
+  const getTrendDirection = (value: number) => {
+    if (value > 0) return 'up';
+    if (value < 0) return 'down';
+    return 'neutral';
+  };
+
+  // Helper function to format trend value with sign
+  const formatTrendValue = (value: number) => {
+    if (value > 0) return `+${formatPercentage(value)}`;
+    return formatPercentage(value);
+  };
+
   const summaryCards = [
     {
       title: 'Tổng Doanh Thu',
@@ -35,9 +55,9 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({ data }) => {
       icon: <DollarSign className="h-6 w-6 text-green-600" />,
       iconBg: 'bg-green-100',
       textColor: 'text-green-600',
-      trend: 'up',
-      trendValue: '+12.5%',
-      description: 'So với tháng trước'
+      trend: getTrendDirection(data.profitMarginPercent),
+      trendValue: formatTrendValue(data.profitMarginPercent),
+      description: 'So với kỳ trước'
     },
     {
       title: 'Lợi Nhuận',
@@ -45,7 +65,7 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({ data }) => {
       icon: <TrendingUp className="h-6 w-6 text-blue-600" />,
       iconBg: 'bg-blue-100',
       textColor: 'text-blue-600',
-      trend: 'up',
+      trend: getTrendDirection(data.profitMarginPercent),
       trendValue: formatPercentage(data.profitMargin),
       description: 'Tỷ lệ lợi nhuận'
     },
@@ -55,9 +75,19 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({ data }) => {
       icon: <Package className="h-6 w-6 text-orange-600" />,
       iconBg: 'bg-orange-100',
       textColor: 'text-orange-600',
-      trend: 'down',
-      trendValue: '-5.2%',
-      description: 'So với tháng trước'
+      trend: getTrendDirection(data.procurementCostPercent),
+      trendValue: formatTrendValue(data.procurementCostPercent),
+      description: 'So với kỳ trước'
+    },
+    {
+      title: 'Chi Phí Tồn Kho',
+      value: formatCurrency(data.inventoryProcurementCost),
+      icon: <Archive className="h-6 w-6 text-indigo-600" />,
+      iconBg: 'bg-indigo-100',
+      textColor: 'text-indigo-600',
+      trend: getTrendDirection(data.inventoryCostPercent),
+      trendValue: formatTrendValue(data.inventoryCostPercent),
+      description: 'So với kỳ trước'
     },
     {
       title: 'Đơn Hàng Hoàn Thành',
@@ -65,9 +95,9 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({ data }) => {
       icon: <ShoppingCart className="h-6 w-6 text-purple-600" />,
       iconBg: 'bg-purple-100',
       textColor: 'text-purple-600',
-      trend: 'up',
-      trendValue: '+8.1%',
-      description: 'So với tháng trước'
+      trend: getTrendDirection(data.completedOrderRate),
+      trendValue: formatTrendValue(data.completedOrderRate),
+      description: 'So với kỳ trước'
     },
     {
       title: 'Đơn Hàng Chờ Xử Lý',
@@ -75,9 +105,9 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({ data }) => {
       icon: <Users className="h-6 w-6 text-yellow-600" />,
       iconBg: 'bg-yellow-100',
       textColor: 'text-yellow-600',
-      trend: 'neutral',
-      trendValue: '0%',
-      description: 'So với tháng trước'
+      trend: getTrendDirection(data.pendingOrderRate),
+      trendValue: formatTrendValue(data.pendingOrderRate),
+      description: 'So với kỳ trước'
     },
     {
       title: 'Giảm Giá',
@@ -85,14 +115,14 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({ data }) => {
       icon: <TrendingDown className="h-6 w-6 text-red-600" />,
       iconBg: 'bg-red-100',
       textColor: 'text-red-600',
-      trend: 'down',
-      trendValue: '-2.3%',
-      description: 'So với tháng trước'
+      trend: getTrendDirection(data.discountRate),
+      trendValue: formatTrendValue(data.discountRate),
+      description: 'So với kỳ trước'
     }
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-5">
       {summaryCards.map((card, index) => (
         <div
           key={index}

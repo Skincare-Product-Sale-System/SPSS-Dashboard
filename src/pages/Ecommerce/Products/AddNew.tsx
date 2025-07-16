@@ -394,6 +394,7 @@ export default function AddNew() {
       try {
         console.log("Form submission started with values:", values);
         console.log("Product items:", productItems);
+        console.log("English Name value:", values.englishName); // Add this line
 
         // Validate all product items
         let hasProductItemErrors = false;
@@ -504,6 +505,7 @@ export default function AddNew() {
         };
 
         console.log("FULL JSON PAYLOAD:", JSON.stringify(productData));
+        console.log("Specifications object:", JSON.stringify(productData.specifications));
 
         // Make API call to create product
         try {
@@ -1321,6 +1323,7 @@ export default function AddNew() {
                         placeholder="Nhập tên tiếng anh"
                         value={productFormik.values.englishName}
                         onChange={productFormik.handleChange}
+                        onBlur={productFormik.handleBlur}
                       />
                     </div>
 

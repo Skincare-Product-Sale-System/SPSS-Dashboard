@@ -14,10 +14,17 @@ interface FinancialData {
     discountAmount: number;
     totalRevenue: number;
     totalProcurementCost: number;
+    inventoryProcurementCost: number;
     totalProfit: number;
     profitMargin: number;
     completedOrderCount: number;
     pendingOrderCount: number;
+    profitMarginPercent: number;
+    procurementCostPercent: number;
+    inventoryCostPercent: number;
+    completedOrderRate: number;
+    pendingOrderRate: number;
+    discountRate: number;
     startDate: string;
     endDate: string;
   };
@@ -60,18 +67,18 @@ const Financial = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const startDateStr = startDate.toISOString();
       const endDateStr = endDate.toISOString();
-      
+
       // Get auth token from localStorage
       const authUser = localStorage.getItem("authUser");
       const token = authUser ? JSON.parse(authUser).accessToken : null;
-      
+
       if (!token) {
         throw new Error('No authentication token found. Please login again.');
       }
-      
+
       // Set authorization header
       const config = {
         headers: {
@@ -79,19 +86,19 @@ const Financial = () => {
           'Content-Type': 'application/json'
         }
       };
-      
+
       console.log('🔍 [Financial] Making API request...');
       console.log('📡 URL:', `${getApiUrl(`/financial-dashboard/all-financial-data?startDate=${encodeURIComponent(startDateStr)}&endDate=${encodeURIComponent(endDateStr)}`)}`);
       console.log('🔑 Token:', token.substring(0, 20) + '...');
-      
+
       const response = await axios.get(
         `${getApiUrl(`/financial-dashboard/all-financial-data?startDate=${encodeURIComponent(startDateStr)}&endDate=${encodeURIComponent(endDateStr)}`)}`,
         config
       );
-      
+
       console.log('📊 [Financial] API Response:', response);
       console.log('📋 [Financial] Response data:', response.data);
-      
+
       // Check if response has data property
       if (response.data && response.data.success) {
         console.log('✅ [Financial] Setting financial data:', response.data.data);
@@ -107,12 +114,12 @@ const Financial = () => {
       } else {
         throw new Error('Invalid response format from API');
       }
-      
+
     } catch (err: any) {
       console.error('❌ [Financial] Error fetching financial data:', err);
       console.error('❌ [Financial] Error response:', err.response);
       console.error('❌ [Financial] Error message:', err.message);
-      
+
       if (err.response?.status === 403) {
         setError('Access forbidden. Please check your permissions or login again.');
       } else if (err.response?.status === 401) {
@@ -160,7 +167,7 @@ const Financial = () => {
           <div className="text-center">
             <div className="text-red-500 text-xl mb-2">Error</div>
             <div className="text-gray-600">{error}</div>
-            <button 
+            <button
               onClick={() => fetchFinancialData(dateRange.startDate, dateRange.endDate)}
               className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             >
@@ -176,10 +183,10 @@ const Financial = () => {
     <React.Fragment>
       <div className="page-content">
         <BreadCrumb title="Kinh Tế" pageTitle="Dashboards" />
-        
+
         {/* Date Range Picker */}
         <div className="mb-6">
-          <DateRangePicker 
+          <DateRangePicker
             startDate={dateRange.startDate}
             endDate={dateRange.endDate}
             onDateRangeChange={handleDateRangeChange}
@@ -199,7 +206,7 @@ const Financial = () => {
               <MonthlyReportChart data={financialData.monthlyReports} />
             )}
           </div>
-          
+
           {/* Order Status Distribution */}
           <div className="col-span-12 lg:col-span-4">
             {financialData && (
@@ -212,7 +219,7 @@ const Financial = () => {
         <div className="grid grid-cols-12 gap-x-5 mt-5">
           <div className="col-span-12">
             {financialData && (
-              <ProductProfitAnalysis 
+              <ProductProfitAnalysis
                 data={financialData.topProfitableProducts}
                 startDate={dateRange.startDate}
                 endDate={dateRange.endDate}
