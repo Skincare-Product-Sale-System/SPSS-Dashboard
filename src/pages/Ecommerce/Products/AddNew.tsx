@@ -9,7 +9,6 @@ import BreadCrumb from "Common/BreadCrumb";
 import { getFirebaseBackend } from "../../../helpers/firebase_helper";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { Editor } from '@tinymce/tinymce-react';
 import { useNavigate } from 'react-router-dom';
 
 // Define interfaces
@@ -52,28 +51,28 @@ const formatNumberWithSpaces = (num: number) => {
 };
 
 // Define a common editor configuration to reuse
-const editorConfig = {
-  height: 250,
-  menubar: false,
-  plugins: [
-    'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-    'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-    'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
-  ],
-  toolbar: 'undo redo | blocks | ' +
-    'bold italic forecolor | alignleft aligncenter ' +
-    'alignright alignjustify | bullist numlist outdent indent | ' +
-    'removeformat | help',
-  content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
-  resize: true,
-  statusbar: true,
-  statusbar_location: 'bottom',
-  elementpath: false,
-  wordcount: false,
-  branding: false,
-  min_height: 150,
-  max_height: 500
-};
+// const editorConfig = {
+//   height: 250,
+//   menubar: false,
+//   plugins: [
+//     'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+//     'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+//     'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
+//   ],
+//   toolbar: 'undo redo | blocks | ' +
+//     'bold italic forecolor | alignleft aligncenter ' +
+//     'alignright alignjustify | bullist numlist outdent indent | ' +
+//     'removeformat | help',
+//   content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+//   resize: true,
+//   statusbar: true,
+//   statusbar_location: 'bottom',
+//   elementpath: false,
+//   wordcount: false,
+//   branding: false,
+//   min_height: 150,
+//   max_height: 500
+// };
 
 export default function AddNew() {
   const [productImage, setProductImage] = useState<ProductImage | null>(null);
@@ -123,6 +122,7 @@ export default function AddNew() {
     fetchOptions();
   }, []);
 
+  // Modify the fetchOptions function to preserve the category hierarchy
   const fetchOptions = async () => {
     try {
       // Fetch brands
@@ -147,15 +147,12 @@ export default function AddNew() {
         );
       }
 
-      // Fetch categories
+      // Fetch categories - preserve hierarchy for nested categories
       const categoriesResponse = await axios.get("https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/product-categories");
       if (categoriesResponse.data && categoriesResponse.data.items) {
-        setCategoryOptions(
-          categoriesResponse.data.items.map((item: any) => ({
-            value: item.id,
-            label: item.categoryName,
-          }))
-        );
+        // Process categories to create a flat list with proper indentation for the dropdown
+        const processedCategories = processCategoriesForDropdown(categoriesResponse.data.items);
+        setCategoryOptions(processedCategories);
       }
 
       // Fetch variation options - fix the data structure access
@@ -188,6 +185,27 @@ export default function AddNew() {
       console.error("Error fetching options:", error);
       alert("Failed to load form options. Please refresh the page.");
     }
+  };
+
+  // Add this helper function to process categories for dropdown display
+  const processCategoriesForDropdown = (categories: any[], level = 0): { value: string, label: string }[] => {
+    let result: { value: string, label: string }[] = [];
+
+    categories.forEach(category => {
+      // Add the current category with proper indentation
+      result.push({
+        value: category.id,
+        label: `${'\u00A0'.repeat(level * 4)}${level > 0 ? '└ ' : ''}${category.categoryName}`
+      });
+
+      // Process children recursively if they exist
+      if (category.children && category.children.length > 0) {
+        const childrenOptions = processCategoriesForDropdown(category.children, level + 1);
+        result = [...result, ...childrenOptions];
+      }
+    });
+
+    return result;
   };
 
   // Update the addProductItem function to use the selected variation option
@@ -800,15 +818,12 @@ export default function AddNew() {
                     <label htmlFor="description" className="inline-block mb-2 text-base font-medium">
                       Mô Tả <span className="text-red-500">*</span>
                     </label>
-                    <Editor
+                    <textarea
                       id="description"
-                      apiKey="8wmapg650a8xkqj2cwz4qgka67mscn8xm3uaijvcyoh70b1g"
-                      init={editorConfig}
+                      className="form-input border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800 placeholder:text-slate-400 dark:placeholder:text-zink-200 w-full p-2 min-h-[150px]"
                       value={productFormik.values.description}
-                      onEditorChange={(content: any) => {
-                        productFormik.setFieldValue('description', content);
-                      }}
-                      onBlur={() => productFormik.setFieldTouched('description', true)}
+                      onChange={productFormik.handleChange}
+                      onBlur={productFormik.handleBlur}
                     />
                     {productFormik.touched.description && productFormik.errors.description && (
                       <p className="mt-1 text-sm text-red-500">{productFormik.errors.description}</p>
@@ -849,6 +864,13 @@ export default function AddNew() {
                       value={categoryOptions.find(option => option.value === productFormik.values.category)}
                       onChange={(option) => productFormik.setFieldValue('category', option?.value || '')}
                       onBlur={() => productFormik.setFieldTouched('category', true)}
+                      styles={{
+                        option: (provided, state) => ({
+                          ...provided,
+                          fontWeight: state.data.label.includes('└') ? 'normal' : 'bold',
+                          paddingLeft: state.data.label.startsWith(' ') ? '20px' : provided.paddingLeft,
+                        }),
+                      }}
                     />
                     {productFormik.touched.category && productFormik.errors.category && (
                       <p className="mt-1 text-sm text-red-500">{productFormik.errors.category}</p>
@@ -1234,15 +1256,12 @@ export default function AddNew() {
                       <label htmlFor="detailedIngredients" className="inline-block mb-2 text-base font-medium">
                         Thành Phần Chi Tiết <span className="text-red-500">*</span>
                       </label>
-                      <Editor
+                      <textarea
                         id="detailedIngredients"
-                        apiKey="8wmapg650a8xkqj2cwz4qgka67mscn8xm3uaijvcyoh70b1g"
-                        init={editorConfig}
+                        className="form-input border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800 placeholder:text-slate-400 dark:placeholder:text-zink-200 w-full p-2 min-h-[150px]"
                         value={productFormik.values.detailedIngredients}
-                        onEditorChange={(content: any) => {
-                          productFormik.setFieldValue('detailedIngredients', content);
-                        }}
-                        onBlur={() => productFormik.setFieldTouched('detailedIngredients', true)}
+                        onChange={productFormik.handleChange}
+                        onBlur={productFormik.handleBlur}
                       />
                       {productFormik.touched.detailedIngredients && productFormik.errors.detailedIngredients && (
                         <p className="mt-1 text-sm text-red-500">{productFormik.errors.detailedIngredients}</p>
@@ -1328,15 +1347,12 @@ export default function AddNew() {
                       <label htmlFor="storageInstruction" className="inline-block mb-2 text-base font-medium">
                         Hướng Dẫn Lưu Trữ <span className="text-red-500">*</span>
                       </label>
-                      <Editor
+                      <textarea
                         id="storageInstruction"
-                        apiKey="8wmapg650a8xkqj2cwz4qgka67mscn8xm3uaijvcyoh70b1g"
-                        init={editorConfig}
+                        className="form-input border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800 placeholder:text-slate-400 dark:placeholder:text-zink-200 w-full p-2 min-h-[150px]"
                         value={productFormik.values.storageInstruction}
-                        onEditorChange={(content: any) => {
-                          productFormik.setFieldValue('storageInstruction', content);
-                        }}
-                        onBlur={() => productFormik.setFieldTouched('storageInstruction', true)}
+                        onChange={productFormik.handleChange}
+                        onBlur={productFormik.handleBlur}
                       />
                       {productFormik.touched.storageInstruction && productFormik.errors.storageInstruction && (
                         <p className="mt-1 text-sm text-red-500">{productFormik.errors.storageInstruction}</p>
@@ -1347,15 +1363,12 @@ export default function AddNew() {
                       <label htmlFor="usageInstruction" className="inline-block mb-2 text-base font-medium">
                         Hướng Dẫn Sử Dụng <span className="text-red-500">*</span>
                       </label>
-                      <Editor
+                      <textarea
                         id="usageInstruction"
-                        apiKey="8wmapg650a8xkqj2cwz4qgka67mscn8xm3uaijvcyoh70b1g"
-                        init={editorConfig}
+                        className="form-input border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800 placeholder:text-slate-400 dark:placeholder:text-zink-200 w-full p-2 min-h-[150px]"
                         value={productFormik.values.usageInstruction}
-                        onEditorChange={(content: any) => {
-                          productFormik.setFieldValue('usageInstruction', content);
-                        }}
-                        onBlur={() => productFormik.setFieldTouched('usageInstruction', true)}
+                        onChange={productFormik.handleChange}
+                        onBlur={productFormik.handleBlur}
                       />
                       {productFormik.touched.usageInstruction && productFormik.errors.usageInstruction && (
                         <p className="mt-1 text-sm text-red-500">{productFormik.errors.usageInstruction}</p>

@@ -1,27 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-interface ModalContextType {
+export interface ModalContextProps {
   isModal: boolean;
   setIsModal: React.Dispatch<React.SetStateAction<boolean>>;
   handleModalToggle: () => void;
   show: boolean;
   onHide: () => void;
-  modalLevel: number;
 }
-
-// Global counter to track how many modals are currently open
-let openModalCount = 0;
-
-export const ModalContext = createContext<ModalContextType>({
-  isModal: false,
-  setIsModal: () => { },
-  handleModalToggle: () => { },
-  show: false,
-  onHide: () => { },
-  modalLevel: 0,
-});
-
-export const useModal = () => useContext(ModalContext);
 
 interface ModalContextProviderProps {
   show: boolean;
@@ -29,9 +14,18 @@ interface ModalContextProviderProps {
   children: React.ReactNode;
 }
 
+const ModalContext = createContext<ModalContextProps | undefined>(undefined);
+
+export const useModalContext = () => {
+  const context = useContext(ModalContext);
+  if (!context) {
+    throw new Error('useModalContext must be used within a ModalContextProvider');
+  }
+  return context;
+};
+
 export const ModalContextProvider: React.FC<ModalContextProviderProps> = ({ show, onHide, children }) => {
   const [isModal, setIsModal] = useState<boolean>(false);
-  const [modalLevel, setModalLevel] = useState<number>(0);
 
   const handleModalToggle = () => {
     setIsModal(!isModal);
@@ -40,37 +34,22 @@ export const ModalContextProvider: React.FC<ModalContextProviderProps> = ({ show
   useEffect(() => {
     const bodyElement = document.body;
 
-    // Increment counter when a modal is shown
+    // Thêm class overflow-hidden khi modal hiển thị
     if (show) {
-      openModalCount++;
-      setModalLevel(openModalCount);
       bodyElement.classList.add('overflow-hidden');
     } else {
-      // Decrement counter when a modal is hidden
-      if (openModalCount > 0) {
-        openModalCount--;
-      }
-
-      // Only remove overflow-hidden if no modals are open
-      if (openModalCount === 0) {
-        bodyElement.classList.remove('overflow-hidden');
-      }
+      // Đảm bảo xóa class overflow-hidden khi modal đóng
+      bodyElement.classList.remove('overflow-hidden');
     }
 
-    // Cleanup function - ensure proper handling when component unmounts
+    // Cleanup function - đảm bảo luôn xóa class khi component unmount
     return () => {
-      if (show) {
-        openModalCount--;
-        // Only remove overflow-hidden if no modals are open
-        if (openModalCount === 0) {
-          bodyElement.classList.remove('overflow-hidden');
-        }
-      }
+      bodyElement.classList.remove('overflow-hidden');
     };
   }, [show]);
 
   return (
-    <ModalContext.Provider value={{ isModal, setIsModal, handleModalToggle, show, onHide, modalLevel }}>
+    <ModalContext.Provider value={{ isModal, setIsModal, handleModalToggle, show, onHide }}>
       {children}
     </ModalContext.Provider>
   );

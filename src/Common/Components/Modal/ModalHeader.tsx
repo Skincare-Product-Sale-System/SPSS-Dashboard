@@ -18,7 +18,7 @@ const ModalHeader = ({ children, className, closeButtonClass, as: Component = "d
         <Component
             {...props}
             className={className ? className : ''}
-            onClick={onHide ? onHide : handleModalToggle}
+            onClick={onHide || (() => handleModalToggle())}
         >
             {children}
             <button data-modal-close="closeModal"

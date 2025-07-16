@@ -119,7 +119,7 @@ const Account = () => {
     const { users, totalCount, totalPages, loading } = useSelector(selectUserData);
     const { skinTypes } = useSelector(selectSkinTypeData);
     const { roles } = useSelector(selectRoleData);
-    
+
     const [filteredUsers, setFilteredUsers] = useState<any>([]);
     const [userData, setUserData] = useState<any>();
 
@@ -160,21 +160,21 @@ const Account = () => {
     // Apply filters
     const applyFilters = useCallback(() => {
         // Check if any filter is active
-        const isAnyFilterActive = 
-            filters.search !== '' || 
-            filters.status !== 'All' || 
-            filters.skinType !== 'All' || 
+        const isAnyFilterActive =
+            filters.search !== '' ||
+            filters.status !== 'All' ||
+            filters.skinType !== 'All' ||
             filters.role !== 'All';
-        
+
         setIsFiltering(isAnyFilterActive);
-        
+
         if (!users || users.length === 0) {
             setFilteredUsers([]);
             return;
         }
-        
+
         let result = [...users];
-        
+
         // Search filter
         if (filters.search) {
             const searchTerm = filters.search.toLowerCase();
@@ -188,12 +188,12 @@ const Account = () => {
                 );
             });
         }
-        
+
         // Status filter
         if (filters.status !== 'All') {
             result = result.filter((user: any) => user.status === filters.status);
         }
-        
+
         // Skin type filter
         if (filters.skinType !== 'All') {
             if (filters.skinType === 'None') {
@@ -202,24 +202,24 @@ const Account = () => {
                 result = result.filter((user: any) => user.skinTypeId === filters.skinType);
             }
         }
-        
+
         // Role filter
         if (filters.role !== 'All') {
             result = result.filter((user: any) => user.roleId === filters.role);
         }
-        
+
         setFilteredUsers(result);
     }, [users, filters]);
 
     // Fetch all data when filtering is active
     useEffect(() => {
         // Check if any filter is active
-        const isAnyFilterActive = 
-            filters.search !== '' || 
-            filters.status !== 'All' || 
-            filters.skinType !== 'All' || 
+        const isAnyFilterActive =
+            filters.search !== '' ||
+            filters.status !== 'All' ||
+            filters.skinType !== 'All' ||
             filters.role !== 'All';
-        
+
         if (isAnyFilterActive) {
             // Fetch all data (use 100 as the maximum allowed pageSize)
             dispatch(getAllUsers({ page: 1, pageSize: 100 }));
@@ -322,17 +322,17 @@ const Account = () => {
     const handleSearchChange = (e: any) => {
         setFilters(prev => ({ ...prev, search: e.target.value }));
     };
-    
+
     // Handle status filter change
     const handleStatusChange = (selectedOption: any) => {
         setFilters(prev => ({ ...prev, status: selectedOption.value }));
     };
-    
+
     // Handle skin type filter change
     const handleSkinTypeChange = (selectedOption: any) => {
         setFilters(prev => ({ ...prev, skinType: selectedOption.value }));
     };
-    
+
     // Handle role filter change
     const handleRoleChange = (selectedOption: any) => {
         setFilters(prev => ({ ...prev, role: selectedOption.value }));
@@ -373,11 +373,11 @@ const Account = () => {
                 ),
             phoneNumber: Yup.string()
                 .required("Vui lòng nhập số điện thoại")
-                .test("phone", "Số điện thoại phải có 9 hoặc 10 chữ số", function(value) {
+                .test("phone", "Số điện thoại phải có 9 hoặc 10 chữ số", function (value) {
                     if (!value) return false;
                     return isValidPhoneNumber(value);
                 })
-                .test("numeric", "Số điện thoại chỉ được chứa chữ số", function(value) {
+                .test("numeric", "Số điện thoại chỉ được chứa chữ số", function (value) {
                     if (!value) return false;
                     const cleanNumber = value.replace(/\s/g, '');
                     return /^\d+$/.test(cleanNumber);
@@ -391,20 +391,20 @@ const Account = () => {
         onSubmit: async (values) => {
             try {
                 let avatarUrl = values.avatarUrl;
-                
+
                 // Upload image to Firebase if a new file is selected
                 if (selectedFile) {
                     const firebaseBackend = getFirebaseBackend();
                     avatarUrl = await firebaseBackend.uploadAccountImage(selectedFile);
                 }
-                
+
                 // Format the phone number and handle skinTypeId
                 const formattedValues = {
                     ...values,
                     phoneNumber: values.phoneNumber.replace(/\s/g, ''),
                     skinTypeId: values.skinTypeId === '' ? null : values.skinTypeId
                 };
-                
+
                 if (isEdit) {
                     const updateUserData = {
                         id: userData ? userData.userId : '',
@@ -413,7 +413,7 @@ const Account = () => {
                             avatarUrl: avatarUrl
                         },
                     };
-                    
+
                     // Dispatch update and then refresh data
                     dispatch(updateUser(updateUserData))
                         .then((response: any) => {
@@ -427,7 +427,7 @@ const Account = () => {
                         ...formattedValues,
                         avatarUrl: avatarUrl
                     };
-                    
+
                     // Dispatch add and then refresh data
                     dispatch(addUser(newUser))
                         .then((response: any) => {
@@ -455,14 +455,14 @@ const Account = () => {
         if (digits.length > 10) {
             return;
         }
-        
+
         // Format the phone number as user types
         if (digits.length >= 7) {
             value = `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
         } else if (digits.length >= 4) {
             value = `${digits.slice(0, 4)} ${digits.slice(4)}`;
         }
-        
+
         validation.setFieldValue('phoneNumber', value);
     };
 
@@ -475,8 +475,8 @@ const Account = () => {
             cell: (cell: any) => (
                 <div className="flex items-center gap-2">
                     <div className="flex items-center justify-center size-10 font-medium rounded-full shrink-0 bg-slate-200 text-slate-800 dark:text-zink-50 dark:bg-zink-600">
-                        {cell.row.original.avatarUrl ? 
-                            <img src={cell.row.original.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" /> : 
+                        {cell.row.original.avatarUrl ?
+                            <img src={cell.row.original.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" /> :
                             (cell.getValue().charAt(0).toUpperCase())}
                     </div>
                     <div className="grow">
@@ -533,7 +533,7 @@ const Account = () => {
                     <Dropdown.Trigger className="flex items-center justify-center size-[30px] p-0 text-slate-500 btn bg-slate-100 hover:text-white hover:bg-slate-600 focus:text-white focus:bg-slate-600 focus:ring focus:ring-slate-100 active:text-white active:bg-slate-600 active:ring active:ring-slate-100 dark:bg-slate-500/20 dark:text-slate-400 dark:hover:bg-slate-500 dark:hover:text-white dark:focus:bg-slate-500 dark:focus:text-white dark:active:bg-slate-500 dark:active:text-white dark:ring-slate-400/20" id="usersAction1">
                         <MoreHorizontal className="size-3" />
                     </Dropdown.Trigger>
-                    <Dropdown.Content placement="right-end" className="absolute z-50 py-2 mt-1 ltr:text-left rtl:text-right list-none bg-white rounded-md shadow-md min-w-[10rem] dark:bg-zink-600" aria-labelledby="usersAction1">
+                    <Dropdown.Content placement="bottom-start" className="absolute z-50 py-2 mt-1 ltr:text-left rtl:text-right list-none bg-white rounded-md shadow-md min-w-[10rem] dark:bg-zink-600" aria-labelledby="usersAction1">
                         <li>
                             <Link className="block px-4 py-1.5 text-base transition-all duration-200 ease-linear text-slate-600 hover:bg-slate-100 hover:text-slate-500 focus:bg-slate-100 focus:text-slate-500 dark:text-zink-100 dark:hover:bg-zink-500 dark:hover:text-zink-200 dark:focus:bg-zink-500 dark:focus:text-zink-200" to="#!" onClick={() => {
                                 const userData = cell.row.original;
@@ -566,21 +566,21 @@ const Account = () => {
         { value: 'Active', label: 'Hoạt Động' },
         { value: 'Inactive', label: 'Không Hoạt Động' },
     ];
-    
+
     const skinTypeOptions = useMemo(() => [
         { value: 'All', label: 'Tất Cả Loại Da' },
         { value: 'None', label: 'Không Có' },
-        ...skinTypes.map((type: any) => ({ 
-            value: type.id, 
-            label: type.name 
+        ...skinTypes.map((type: any) => ({
+            value: type.id,
+            label: type.name
         }))
     ], [skinTypes]);
-    
+
     const roleOptions = useMemo(() => [
         { value: 'All', label: 'Tất Cả Vai Trò' },
-        ...roles.map((role: any) => ({ 
-            value: role.roleId, 
-            label: role.roleName 
+        ...roles.map((role: any) => ({
+            value: role.roleId,
+            label: role.roleName
         }))
     ], [roles]);
 
@@ -589,9 +589,9 @@ const Account = () => {
         // Only change page if not in filtering mode
         if (!isFiltering) {
             setCurrentPage(page);
-            dispatch(getAllUsers({ 
-                page: page, 
-                pageSize: pageSize 
+            dispatch(getAllUsers({
+                page: page,
+                pageSize: pageSize
             }));
         }
     };
@@ -605,8 +605,8 @@ const Account = () => {
                     <div className="text-sm text-slate-500 dark:text-zink-200">
                         Hiển thị {filteredUsers.length} kết quả
                     </div>
-                    <button 
-                        type="button" 
+                    <button
+                        type="button"
                         className="text-custom-500 bg-white btn border-custom-500 hover:text-white hover:bg-custom-600 focus:text-white focus:bg-custom-600 focus:border-custom-600"
                         onClick={() => {
                             // Reset all filters
@@ -624,7 +624,7 @@ const Account = () => {
                 </div>
             );
         }
-        
+
         return (
             <div className="flex justify-end mt-4 mr-4">
                 <ul className="flex flex-wrap items-center gap-2 mt-2">
@@ -638,23 +638,22 @@ const Account = () => {
                             <i className="ri-arrow-left-s-line text-xl rtl:rotate-180"></i>
                         </button>
                     </li>
-                    
+
                     {[...Array(totalPages || 1)].map((_, i) => (
                         <li key={i + 1} className="inline">
                             <button
                                 type="button"
-                                className={`flex items-center justify-center size-8 transition-all duration-150 ease-linear border rounded border-slate-200 dark:border-zink-500 ${
-                                    currentPage === i + 1
+                                className={`flex items-center justify-center size-8 transition-all duration-150 ease-linear border rounded border-slate-200 dark:border-zink-500 ${currentPage === i + 1
                                         ? "text-white bg-custom-500 border-custom-500 hover:text-white hover:bg-custom-600 hover:border-custom-600 focus:text-white focus:bg-custom-600 focus:border-custom-600 active:text-white active:bg-custom-600 active:border-custom-600"
                                         : "text-slate-500 bg-white hover:text-custom-500 hover:border-custom-500 focus:text-custom-500 focus:border-custom-500 active:text-custom-500 active:border-custom-500 dark:bg-zink-700 dark:text-zink-200 dark:border-zink-500 dark:hover:text-custom-500 dark:hover:border-custom-500"
-                                }`}
+                                    }`}
                                 onClick={() => goToPage(i + 1)}
                             >
                                 {i + 1}
                             </button>
                         </li>
                     ))}
-                    
+
                     <li className="inline">
                         <button
                             type="button"
@@ -686,23 +685,23 @@ const Account = () => {
                                         </button>
                                     </div>
                                 </div>
-                                
+
                                 <div className="!py-3.5 card-body border-y border-dashed border-slate-200 dark:border-zink-500 bg-white">
                                     <form action="#!">
                                         <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
                                             <div className="relative xl:col-span-3">
-                                                <input 
-                                                    type="text" 
-                                                    className="ltr:pl-8 rtl:pr-8 search form-input border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800 placeholder:text-slate-400 dark:placeholder:text-zink-200" 
-                                                    placeholder="Tìm kiếm tên, email, số điện thoại..." 
-                                                    autoComplete="off" 
+                                                <input
+                                                    type="text"
+                                                    className="ltr:pl-8 rtl:pr-8 search form-input border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800 placeholder:text-slate-400 dark:placeholder:text-zink-200"
+                                                    placeholder="Tìm kiếm tên, email, số điện thoại..."
+                                                    autoComplete="off"
                                                     onChange={handleSearchChange}
                                                     value={filters.search}
                                                 />
                                                 <Search className="inline-block size-4 absolute ltr:left-2.5 rtl:right-2.5 top-2.5 text-slate-500 dark:text-zink-200 fill-slate-100 dark:fill-zink-600" />
                                                 {filters.search && (
-                                                    <button 
-                                                        type="button" 
+                                                    <button
+                                                        type="button"
                                                         className="absolute ltr:right-2.5 rtl:left-2.5 top-2.5 text-slate-500 dark:text-zink-200"
                                                         onClick={() => setFilters(prev => ({ ...prev, search: '' }))}
                                                     >
@@ -743,7 +742,7 @@ const Account = () => {
                                         </div>
                                     </form>
                                 </div>
-                                
+
                                 <div className="overflow-x-auto">
                                     <TableContainer
                                         isPagination={false}
@@ -757,7 +756,7 @@ const Account = () => {
                                         thclassName={"px-3.5 py-2.5 font-semibold border-y border-slate-200 dark:border-zink-500"}
                                         tdclassName={"px-3.5 py-2.5 border-y border-slate-200 dark:border-zink-500"}
                                     />
-                                    
+
                                     <CustomPagination />
                                 </div>
                             </div>
@@ -785,25 +784,25 @@ const Account = () => {
                     }}>
                         <div className="mb-3">
                             <div className="relative size-24 mx-auto mb-4 rounded-full shadow-md bg-slate-100 dark:bg-zink-500">
-                                <img 
+                                <img
                                     src={
-                                        isImageRemoved 
-                                            ? dummyImg 
+                                        isImageRemoved
+                                            ? dummyImg
                                             : (selectedImage || validation.values.avatarUrl || dummyImg)
-                                    } 
-                                    alt="" 
-                                    className="size-full rounded-full" 
+                                    }
+                                    alt=""
+                                    className="size-full rounded-full"
                                 />
                                 {!viewMode && (
                                     <>
                                         <div className="absolute bottom-0 ltr:right-0 rtl:left-0 flex items-center justify-center size-8 rounded-full cursor-pointer bg-slate-100 dark:bg-zink-600">
-                                            <input 
-                                                type="file" 
-                                                className="absolute inset-0 size-full opacity-0 cursor-pointer" 
+                                            <input
+                                                type="file"
+                                                className="absolute inset-0 size-full opacity-0 cursor-pointer"
                                                 onChange={(e) => {
                                                     handleImageChange(e);
                                                     setIsImageRemoved(false);
-                                                }} 
+                                                }}
                                             />
                                             <ImagePlus className="size-4 text-slate-500 fill-slate-200 dark:text-zink-200 dark:fill-zink-600" />
                                         </div>

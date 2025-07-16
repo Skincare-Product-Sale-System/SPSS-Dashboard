@@ -100,7 +100,8 @@ interface ContentProps {
 const Content: React.FC<ContentProps> = ({ as: Component = 'div', className, children, placement }) => {
   const { open, setOpen } = useContext(DropDownContext)!;
 
-  const getClassName = className || "absolute z-50 py-2 mt-1 text-left list-none bg-white rounded-md shadow-md dropdown-menu min-w-max dark:bg-zink-400";
+  // Increase the default z-index to ensure dropdown appears above all elements
+  const getClassName = className || "absolute z-[9999] py-2 mt-1 text-left list-none bg-white rounded-md shadow-md dropdown-menu min-w-max dark:bg-zink-400";
 
   const [placementState, setPlacement] = useState('right-end' as 'right-end' | 'start-end' | 'top-end' | 'bottom-start' | 'bottom-end' | 'top-start');
 
@@ -112,48 +113,83 @@ const Content: React.FC<ContentProps> = ({ as: Component = 'div', className, chi
 
   const isRtl = document.getElementsByTagName("html")[0].getAttribute("dir");
 
+  // Handle positioning for table environments
+  useEffect(() => {
+    if (open && dropdownElementRef.current) {
+      const dropdownElement = dropdownElementRef.current;
+
+      // Check if this dropdown is inside a table
+      const isInTable = dropdownElement.closest('table') !== null ||
+        className?.includes('table-dropdown-content');
+
+      if (isInTable) {
+        // For table dropdowns, use fixed positioning to escape table context
+        dropdownElement.style.position = 'fixed';
+        dropdownElement.style.zIndex = '9999';
+
+        // Get the trigger button position
+        const triggerElement = dropdownElement.parentElement?.querySelector('button');
+        if (triggerElement) {
+          const rect = triggerElement.getBoundingClientRect();
+
+          // Position based on placement
+          if (placementState.includes('top')) {
+            dropdownElement.style.bottom = `${window.innerHeight - rect.top + 5}px`;
+          } else {
+            dropdownElement.style.top = `${rect.bottom + 5}px`;
+          }
+
+          // Default to left positioning instead of right
+          dropdownElement.style.left = `${rect.left}px`;
+        }
+      }
+    }
+  }, [open, placement, className]);
+
   const getDropdownStyle = () => {
-    if (open && placementState === 'right-end' && dropdownElementRef.current) {
+    if (open && dropdownElementRef.current) {
       const dropdownElement = dropdownElementRef.current;
+
+      // Skip inline styling for table dropdowns as they're handled by the useEffect
+      if (className?.includes('table-dropdown-content')) {
+        return {};
+      }
+
       dropdownElement.style.position = 'absolute';
-      isRtl === "rtl" ? dropdownElement.style.inset = '0px auto auto 0px' : dropdownElement.style.inset = '0px 0px auto auto';
-      dropdownElement.style.margin = '0px';
-      dropdownElement.style.transform = 'translate(0px, 54px)';
-    }
-    if (open && placementState === 'start-end' && dropdownElementRef.current) {
-      const dropdownElement = dropdownElementRef.current;
-      dropdownElement.style.position = 'absolute';
-      dropdownElement.style.inset = '0px auto auto 0px';
-      dropdownElement.style.margin = '0px';
-      dropdownElement.style.transform = 'translate(0px, 20px)';
-    }
-    if (open && placementState === 'top-end' && dropdownElementRef.current) {
-      const dropdownElement = dropdownElementRef.current;
-      dropdownElement.style.position = 'absolute';
-      dropdownElement.style.inset = 'auto 0px 0px auto';
-      dropdownElement.style.margin = '0px';
-      dropdownElement.style.transform = 'translate(-58px, -30px)';
-    }
-    if (open && placementState === 'bottom-start' && dropdownElementRef.current) {
-      const dropdownElement = dropdownElementRef.current;
-      dropdownElement.style.position = 'absolute';
-      dropdownElement.style.inset = '0px 0px auto auto';
-      dropdownElement.style.margin = '0px';
-      dropdownElement.style.transform = 'translate(0px, 54px)';
-    }
-    if (open && placementState === 'bottom-end' && dropdownElementRef.current) {
-      const dropdownElement = dropdownElementRef.current;
-      dropdownElement.style.position = 'absolute';
-      dropdownElement.style.inset = '0px 0px auto auto';
-      dropdownElement.style.margin = '0px';
-      dropdownElement.style.transform = 'translate(0px, 39px)';
-    }
-    if (open && placementState === 'top-start' && dropdownElementRef.current) {
-      const dropdownElement = dropdownElementRef.current;
-      dropdownElement.style.position = 'absolute';
-      dropdownElement.style.inset = 'auto auto 0px 0px';
-      dropdownElement.style.margin = '0px';
-      dropdownElement.style.transform = 'translate(0px, -95px)';
+      dropdownElement.style.zIndex = '9999';
+
+      // Ensure the dropdown is visible by adding a higher stacking context
+      // Default all placements to left side positioning
+      if (placementState === 'right-end') {
+        dropdownElement.style.inset = '0px auto auto 0px';
+        dropdownElement.style.margin = '0px';
+        dropdownElement.style.transform = 'translate(0px, 54px)';
+      }
+      else if (placementState === 'start-end') {
+        dropdownElement.style.inset = '0px auto auto 0px';
+        dropdownElement.style.margin = '0px';
+        dropdownElement.style.transform = 'translate(0px, 20px)';
+      }
+      else if (placementState === 'top-end') {
+        dropdownElement.style.inset = 'auto auto 0px 0px';
+        dropdownElement.style.margin = '0px';
+        dropdownElement.style.transform = 'translate(0px, -30px)';
+      }
+      else if (placementState === 'bottom-start') {
+        dropdownElement.style.inset = '0px auto auto 0px';
+        dropdownElement.style.margin = '0px';
+        dropdownElement.style.transform = 'translate(0px, 54px)';
+      }
+      else if (placementState === 'bottom-end') {
+        dropdownElement.style.inset = '0px auto auto 0px';
+        dropdownElement.style.margin = '0px';
+        dropdownElement.style.transform = 'translate(0px, 39px)';
+      }
+      else if (placementState === 'top-start') {
+        dropdownElement.style.inset = 'auto auto 0px 0px';
+        dropdownElement.style.margin = '0px';
+        dropdownElement.style.transform = 'translate(0px, -95px)';
+      }
     }
     return {};
   };

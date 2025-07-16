@@ -7,6 +7,7 @@ import { createSelector } from '@reduxjs/toolkit';
 import { useDispatch, useSelector } from 'react-redux';
 import { Settings } from 'lucide-react';
 import CartDrawer from 'Common/CartDrawer';
+import SessionWarningBanner from 'Common/SessionWarningBanner';
 
 import {
   changeLayout,
@@ -122,6 +123,7 @@ const Layout = ({ children }: any) => {
 
   return (
     <>
+      <SessionWarningBanner />
       <div className="group-data-[sidebar-size=sm]:min-h-sm group-data-[sidebar-size=sm]:relative">
         <Sidebar layoutType={layoutType} layoutSidebarSizeType={layoutSidebarSizeType} />
         <Header handleToggleDrawer={handleToggleDrawer} handleDrawer={handleDrawer} />

@@ -182,7 +182,7 @@ const Header = ({ handleToggleDrawer, handleDrawer }: any) => {
                 <ChevronsRight className="hidden w-5 h-5 group-data-[sidebar-size=sm]:block" />
               </button>
 
-           
+
 
               <div className="flex gap-3 ms-auto">
                 {/* LightDark */}
@@ -233,7 +233,7 @@ const Header = ({ handleToggleDrawer, handleDrawer }: any) => {
                     </div>
                   </Dropdown.Trigger>
                   <Dropdown.Content
-                    placement="right-end"
+                    placement="start-end"
                     className="absolute z-50 p-4 ltr:text-left rtl:text-right bg-white rounded-md shadow-md !top-4 dropdown-menu min-w-[14rem] dark:bg-zink-600"
                     aria-labelledby="dropdownMenuButton"
                   >

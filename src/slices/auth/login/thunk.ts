@@ -16,93 +16,84 @@ interface User {
 export const loginUser =
   (
     user: User,
-    history: any  
+    history: any
   ): ThunkAction<void, RootState, unknown, Action<string>> =>
-  async (dispatch: Dispatch) => {
-    // Clear any previous errors
-    dispatch(clearLoginError());
-    
-    axios
-      .post(`${API_CONFIG.BASE_URL}/authentications/login`, {
-        usernameOrEmail: user.email,
-        password: user.password,
-      })
-      .then((response: any) => {
-        console.log("Login response:", response);
-        // Since we disabled unwrapping for login endpoint, response.data contains the actual data
-        const { accessToken, refreshToken } = response.data;
-        
-        if (!accessToken) {
-          throw new Error("No access token received");
-        }
-        
-        const decodedToken = decodeJWT(accessToken);
-        console.log("decodedToken", decodedToken);
+    async (dispatch: Dispatch) => {
+      // Clear any previous errors
+      dispatch(clearLoginError());
 
-        dispatch(loginSuccess("ok"));
-        localStorage.setItem(
-          "authUser",
-          JSON.stringify({
+      axios
+        .post(`${API_CONFIG.BASE_URL}/authentications/login`, {
+          usernameOrEmail: user.email,
+          password: user.password,
+        })
+        .then((response: any) => {
+          console.log("Login response:", response);
+          // Since we disabled unwrapping for login endpoint, response.data contains the actual data
+          const { accessToken, refreshToken } = response.data;
+
+          if (!accessToken) {
+            throw new Error("No access token received");
+          }
+
+          const decodedToken = decodeJWT(accessToken);
+          console.log("decodedToken", decodedToken);
+
+          if (!decodedToken) {
+            throw new Error("Invalid token format");
+          }
+
+          dispatch(loginSuccess("ok"));
+
+          // Lưu trữ dữ liệu người dùng
+          const userData = {
             accessToken: accessToken,
-            token: accessToken,
+            token: accessToken, // Giữ lại cho backward compatibility
             refreshToken: refreshToken,
             imageUrl: decodedToken?.AvatarUrl,
             name: decodedToken?.UserName,
             role: decodedToken?.Role,
-          })
-        );
-        
-        setAuthorization(accessToken);
-        
-        history("/dashboard");
-      })
-      .catch((error) => {
-        console.error("Login error:", error);
-        console.error("Error response:", error.response);
-        dispatch(loginError(error.response?.data?.message || error.message || "Đăng nhập thất bại"));
-      });
-    // try {
-    //   if (process.env.REACT_APP_DEFAULTAUTH === "fake") {
-    //     try {
-    //       // response = await postLogin({
-    //       //     email: user.email,
-    //       //     password: user.password,
-    //       // });
-    //       console.log("response", postLogin);
-    //     } catch (error) {
-    //       console.error("Error during postLogin:", error);
-    //     }
-    //   } else if (process.env.REACT_APP_DEFAULTAUTH === "firebase") {
-    //     let fireBaseBackend = await getFirebaseBackend();
+            id: decodedToken?.Id,
+            email: decodedToken?.Email,
+            tokenExpiry: decodedToken?.exp, // Lưu thời gian hết hạn để dễ debug
+            lastLogin: new Date().toISOString(),
+          };
 
-    //     response = await fireBaseBackend.loginUser(user.email, user.password);
-    //   }
+          // Lưu vào cả localStorage và sessionStorage
+          const userDataString = JSON.stringify(userData);
+          localStorage.setItem("authUser", userDataString);
+          sessionStorage.setItem("authUser", userDataString);
+          console.log("Đã lưu dữ liệu người dùng vào localStorage và sessionStorage");
 
-    //   if (response) {
-    //     dispatch(loginSuccess(response));
-    //     history("/dashboard");
-    //   }
-    // } catch (error) {
-    //   dispatch(loginError(error));
-    // }
-  };
+          // Thiết lập Authorization header
+          setAuthorization(accessToken);
+
+          // Chuyển hướng đến trang dashboard
+          history("/dashboard");
+        })
+        .catch((error) => {
+          console.error("Login error:", error);
+          console.error("Error response:", error.response);
+          dispatch(loginError(error.response?.data?.message || error.message || "Đăng nhập thất bại"));
+        });
+    }
 
 export const logoutUser = () => async (dispatch: Dispatch) => {
   try {
+    // Xóa dữ liệu trong cả localStorage và sessionStorage
     localStorage.removeItem("authUser");
-    
-    // Clear the authorization header
+    sessionStorage.removeItem("authUser");
+
+    // Xóa Authorization header
     setAuthorization(null);
 
-    let fireBaseBackend = await getFirebaseBackend();
+    // Thêm log để theo dõi
+    console.log("User logged out manually");
 
-    if (process.env.REACT_APP_DEFAULTAUTH === "firebase") {
-      const response = fireBaseBackend.logout;
-      dispatch(logoutSuccess(response));
-    } else {
-      dispatch(logoutSuccess(true));
-    }
+    // Thông báo logout thành công
+    dispatch(logoutSuccess(true));
   } catch (error) {
+    console.error("Logout error:", error);
     dispatch(loginError(error));
   }
 };

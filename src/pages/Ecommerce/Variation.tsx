@@ -105,12 +105,12 @@ const Variation = () => {
       return keysToSearch.some((key) => {
         if (key === 'options' && item.variationOptions) {
           // Search through variation options
-          return item.variationOptions.some((option: any) => 
+          return item.variationOptions.some((option: any) =>
             option.value.toLowerCase().includes(search.toLowerCase())
           );
         }
-        
-        const value = key.includes('.') 
+
+        const value = key.includes('.')
           ? key.split('.').reduce((obj, k) => obj && obj[k], item)?.toString().toLowerCase() || ''
           : item[key]?.toString().toLowerCase() || '';
         return value.includes(search.toLowerCase());
@@ -262,37 +262,37 @@ const Variation = () => {
         enableSorting: true,
         size: 100,
         cell: (cell: any) => (
-            <Dropdown className="relative ltr:ml-2 rtl:mr-2">
-                <Dropdown.Trigger id="orderAction1" data-bs-toggle="dropdown" className="flex items-center justify-center size-[30px] p-0 text-slate-500 btn bg-slate-100 hover:text-white hover:bg-slate-600 focus:text-white focus:bg-slate-600 focus:ring focus:ring-slate-100 active:text-white active:bg-slate-600 active:ring active:ring-slate-100 dark:bg-slate-500/20 dark:text-slate-400 dark:hover:bg-slate-500 dark:hover:text-white dark:focus:bg-slate-500 dark:focus:text-white dark:active:bg-slate-500 dark:active:text-white dark:ring-slate-400/20"><MoreHorizontal className="size-3" /></Dropdown.Trigger>
-                <Dropdown.Content placement={cell.row.index ? "top-end" : "right-end"} className="absolute z-50 py-2 mt-1 ltr:text-left rtl:text-right list-none bg-white rounded-md shadow-md min-w-[10rem] dark:bg-zink-600" aria-labelledby="orderAction1">
-                    <li>
-                        <Link
-                          to="#!"
-                          className="block px-4 py-1.5 text-base transition-all duration-200 ease-linear text-slate-600 hover:bg-slate-100 hover:text-slate-500 focus:bg-slate-100 focus:text-slate-500 dark:text-zink-100 dark:hover:bg-zink-500 dark:hover:text-zink-200 dark:focus:bg-zink-500 dark:focus:text-zink-200"
-                          onClick={() => {
-                            const data = cell.row.original;
-                            handleOverviewClick(data);
-                          }}
-                        >
-                          <Eye className="inline-block size-3 ltr:mr-1 rtl:ml-1" />{" "}
-                          <span className="align-middle">Xem Chi Tiết</span>
-                        </Link>
-                    </li>
-                    <li>
-                        <Link to="#!" data-modal-target="addOrderModal" className="block px-4 py-1.5 text-base transition-all duration-200 ease-linear text-slate-600 hover:bg-slate-100 hover:text-slate-500 focus:bg-slate-100 focus:text-slate-500 dark:text-zink-100 dark:hover:bg-zink-500 dark:hover:text-zink-200 dark:focus:bg-zink-500 dark:focus:text-zink-200" onClick={() => {
-                            const data = cell.row.original;
-                            handleUpdateDataClick(data);
-                        }}>
-                            <FileEdit className="inline-block size-3 ltr:mr-1 rtl:ml-1" /> <span className="align-middle">Chỉnh Sửa</span></Link>
-                    </li>
-                    <li>
-                        <Link to="#!" className="block px-4 py-1.5 text-base transition-all duration-200 ease-linear text-slate-600 hover:bg-slate-100 hover:text-slate-500 focus:bg-slate-100 focus:text-slate-500 dark:text-zink-100 dark:hover:bg-zink-500 dark:hover:text-zink-200 dark:focus:bg-zink-500 dark:focus:text-zink-200" onClick={() => {
-                            const data = cell.row.original;
-                            onClickDelete(data);
-                        }}><Trash2 className="inline-block size-3 ltr:mr-1 rtl:ml-1" /> <span className="align-middle">Xóa</span></Link>
-                    </li>
-                </Dropdown.Content>
-            </Dropdown>
+          <Dropdown className="relative ltr:ml-2 rtl:mr-2">
+            <Dropdown.Trigger id="orderAction1" data-bs-toggle="dropdown" className="flex items-center justify-center size-[30px] p-0 text-slate-500 btn bg-slate-100 hover:text-white hover:bg-slate-600 focus:text-white focus:bg-slate-600 focus:ring focus:ring-slate-100 active:text-white active:bg-slate-600 active:ring active:ring-slate-100 dark:bg-slate-500/20 dark:text-slate-400 dark:hover:bg-slate-500 dark:hover:text-white dark:focus:bg-slate-500 dark:focus:text-white dark:active:bg-slate-500 dark:active:text-white dark:ring-slate-400/20"><MoreHorizontal className="size-3" /></Dropdown.Trigger>
+            <Dropdown.Content placement={cell.row.index ? "top-start" : "bottom-start"} className="absolute z-50 py-2 mt-1 ltr:text-left rtl:text-right list-none bg-white rounded-md shadow-md min-w-[10rem] dark:bg-zink-600" aria-labelledby={`dropdownMenuButton_${cell.row.index}`}>
+              <li>
+                <Link
+                  to="#!"
+                  className="block px-4 py-1.5 text-base transition-all duration-200 ease-linear text-slate-600 hover:bg-slate-100 hover:text-slate-500 focus:bg-slate-100 focus:text-slate-500 dark:text-zink-100 dark:hover:bg-zink-500 dark:hover:text-zink-200 dark:focus:bg-zink-500 dark:focus:text-zink-200"
+                  onClick={() => {
+                    const data = cell.row.original;
+                    handleOverviewClick(data);
+                  }}
+                >
+                  <Eye className="inline-block size-3 ltr:mr-1 rtl:ml-1" />{" "}
+                  <span className="align-middle">Xem Chi Tiết</span>
+                </Link>
+              </li>
+              <li>
+                <Link to="#!" data-modal-target="addOrderModal" className="block px-4 py-1.5 text-base transition-all duration-200 ease-linear text-slate-600 hover:bg-slate-100 hover:text-slate-500 focus:bg-slate-100 focus:text-slate-500 dark:text-zink-100 dark:hover:bg-zink-500 dark:hover:text-zink-200 dark:focus:bg-zink-500 dark:focus:text-zink-200" onClick={() => {
+                  const data = cell.row.original;
+                  handleUpdateDataClick(data);
+                }}>
+                  <FileEdit className="inline-block size-3 ltr:mr-1 rtl:ml-1" /> <span className="align-middle">Chỉnh Sửa</span></Link>
+              </li>
+              <li>
+                <Link to="#!" className="block px-4 py-1.5 text-base transition-all duration-200 ease-linear text-slate-600 hover:bg-slate-100 hover:text-slate-500 focus:bg-slate-100 focus:text-slate-500 dark:text-zink-100 dark:hover:bg-zink-500 dark:hover:text-zink-200 dark:focus:bg-zink-500 dark:focus:text-zink-200" onClick={() => {
+                  const data = cell.row.original;
+                  onClickDelete(data);
+                }}><Trash2 className="inline-block size-3 ltr:mr-1 rtl:ml-1" /> <span className="align-middle">Xóa</span></Link>
+              </li>
+            </Dropdown.Content>
+          </Dropdown>
         ),
       },
     ],
@@ -302,8 +302,8 @@ const Variation = () => {
   return (
     <React.Fragment>
       <BreadCrumb title="Variations" pageTitle="Variations" />
-      <DeleteModal 
-        show={deleteModal} 
+      <DeleteModal
+        show={deleteModal}
         onHide={deleteToggle}
         onDelete={handleDelete}
       />
@@ -369,7 +369,7 @@ const Variation = () => {
                 <Search className="size-6 mx-auto mb-3 text-sky-500 fill-sky-100 dark:fill-sky-500/20" />
                 <h5 className="mt-2 mb-1">Xin lỗi! Không Tìm Thấy Kết Quả</h5>
                 <p className="mb-0 text-slate-500 dark:text-zink-200">
-                  Chúng tôi đã tìm kiếm trong tất cả biến thể. Không tìm thấy 
+                  Chúng tôi đã tìm kiếm trong tất cả biến thể. Không tìm thấy
                   biến thể nào phù hợp với tìm kiếm của bạn.
                 </p>
               </div>
@@ -378,7 +378,7 @@ const Variation = () => {
         </div>
       </div>
 
-    
+
       <Modal
         show={show}
         onHide={toggle}
@@ -404,7 +404,7 @@ const Variation = () => {
                   <span className="font-medium text-slate-800 dark:text-zink-50">Danh Mục:</span>{" "}
                   {eventData?.productCategory?.categoryName || "N/A"}
                 </p>
-                
+
                 {eventData?.variationOptions && eventData.variationOptions.length > 0 && (
                   <div className="mt-4">
                     <h6 className="mb-2 text-14">Variation Options:</h6>
@@ -472,16 +472,16 @@ const Variation = () => {
               </div>
 
               <div className="flex justify-end gap-2 mt-4">
-                <button 
-                  type="button" 
-                  className="text-red-500 bg-white btn hover:text-red-500 hover:bg-red-100 focus:text-red-500 focus:bg-red-100 active:text-red-500 active:bg-red-100 dark:bg-zink-600 dark:hover:bg-red-500/10 dark:focus:bg-red-500/10 dark:active:bg-red-500/10" 
+                <button
+                  type="button"
+                  className="text-red-500 bg-white btn hover:text-red-500 hover:bg-red-100 focus:text-red-500 focus:bg-red-100 active:text-red-500 active:bg-red-100 dark:bg-zink-600 dark:hover:bg-red-500/10 dark:focus:bg-red-500/10 dark:active:bg-red-500/10"
                   onClick={toggle}
                 >
                   {isOverview ? "Đóng" : "Hủy"}
                 </button>
                 {!isOverview && (
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     className="text-white btn bg-custom-500 border-custom-500 hover:text-white hover:bg-custom-600 hover:border-custom-600 focus:text-white focus:bg-custom-600 focus:border-custom-600 focus:ring focus:ring-custom-100 active:text-white active:bg-custom-600 active:border-custom-600 active:ring active:ring-custom-100 dark:ring-custom-400/20"
                   >
                     {isEdit ? "Cập Nhật" : "Thêm"}

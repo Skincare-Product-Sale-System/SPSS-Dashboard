@@ -125,7 +125,7 @@ const Blog = () => {
           setCurrentPage((prev) => prev - 1);
         }
       })
-      .catch((error: any) => {
+      .catch((error: unknown) => {
         console.error("Failed to fetch blogs:", error);
       });
   }, [dispatch, currentPage, refreshFlag, pageCount]);
@@ -144,7 +144,7 @@ const Blog = () => {
               detailsMap[blog.id] = response.data;
             }
           })
-          .catch((error) => {
+          .catch((error: unknown) => {
             console.error(`Error fetching details for blog ${blog.id}:`, error);
           })
       );
@@ -192,32 +192,32 @@ const Blog = () => {
     onSubmit: async (values) => {
       try {
         console.log("onSubmit triggered, processing values...");
-        
+
         // Check if any image section is missing content
         const hasInvalidImageSection = values.Sections.some(
           (section: BlogSection) => section.contentType === "image" && !section.content && !section.previewUrl
         );
-        
+
         if (hasInvalidImageSection) {
           toast.error("Please upload images for all image sections");
           return;
         }
-        
+
         // Process sections to ensure proper order (starting from 1 instead of 0)
         const processedSections = values.Sections.map((section: BlogSection, index: number) => {
           // Make sure content is properly set for image type sections
           let sectionContent = section.content;
-          
+
           // If it's an image type but content is empty, use the previewUrl if available
           if (section.contentType === "image" && !sectionContent && section.previewUrl) {
             sectionContent = section.previewUrl;
           }
-          
+
           // Only include necessary fields for the API
           return {
             contentType: section.contentType,
             subtitle: section.subtitle || "",
-            content: sectionContent || "", 
+            content: sectionContent || "",
             order: index + 1 // Start from 1 instead of 0
           };
         });
@@ -230,7 +230,7 @@ const Blog = () => {
             description: values.Description,
             sections: processedSections,
           });
-          
+
           const updateData = {
             id: eventData.Id,
             data: {
@@ -249,7 +249,7 @@ const Blog = () => {
               setRefreshFlag((prev) => !prev);
               toast.success("Blog updated successfully");
             })
-            .catch((error: any) => {
+            .catch((error: unknown) => {
               console.error("Failed to update blog:", error);
               toast.error("Failed to update blog");
             });
@@ -262,18 +262,18 @@ const Blog = () => {
           };
 
           console.log("Submitting new blog:", newData);
-          
+
           // Try directly calling the API without using dispatch
           dispatch(addBlog(newData))
             .unwrap()
-            .then((response : any) => {
+            .then((response: any) => {
               console.log("Blog added successfully:", response);
               validation.resetForm();
               toggle();
               setRefreshFlag((prev) => !prev);
               toast.success("Blog added successfully");
             })
-            .catch((error: any) => {
+            .catch((error: unknown) => {
               console.error("Failed to add blog:", error);
               toast.error("Failed to add blog");
             });
@@ -292,10 +292,10 @@ const Blog = () => {
       .then((response: any) => {
         if (response.success && response.data) {
           const blogData = response.data;
-          
+
           // Prepare sections with proper order if they exist
           let sections = blogData.sections || [];
-          
+
           // If no sections but we have blogContent, create a default section
           if (sections.length === 0 && blogData.blogContent) {
             sections = [{
@@ -305,10 +305,10 @@ const Blog = () => {
               order: 1,
             }];
           }
-          
+
           // Sort sections by order
           sections = sections.sort((a: any, b: any) => a.order - b.order);
-          
+
           // Set the event data with all details
           setEventData({
             Id: blogData.id,
@@ -317,7 +317,7 @@ const Blog = () => {
             ImageUrl: blogData.thumbnail,
             Sections: sections,
           });
-          
+
           // Set the image preview if there's an existing image
           if (blogData.thumbnail) {
             setSelectfiles({
@@ -325,12 +325,12 @@ const Blog = () => {
               path: blogData.thumbnail.split("/").pop(), // Extract filename from URL
             });
           }
-          
+
           setIsEdit(true);
           setShow(true);
         }
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         console.error("Error fetching blog details for edit:", error);
         toast.error("Error fetching blog details");
       });
@@ -360,7 +360,7 @@ const Blog = () => {
           setRefreshFlag((prev) => !prev);
           toast.success("Blog deleted successfully");
         })
-        .catch((error: any) => {
+        .catch((error: unknown) => {
           console.error("Failed to delete blog:", error);
           toast.error("Failed to delete blog");
         });
@@ -420,7 +420,7 @@ const Blog = () => {
           }));
         }
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         console.error("Error fetching blog details:", error);
         toast.error("Error fetching blog details");
       });
@@ -449,27 +449,27 @@ const Blog = () => {
   // Search functionality: Filters blogs based on user input
   const filterSearchData = (e: any) => {
     const search = e.target.value.toLowerCase().trim();
-    
+
     if (search === '') {
       // If search is empty, reset to original data from API
       setData([]);
       return;
     }
-    
+
     // Create a combined filtered result
     const filteredResults = blogs.filter((item: any) => {
       // Check title and description
       const titleMatch = item.title?.toLowerCase().includes(search);
       const descriptionMatch = item.description?.toLowerCase().includes(search);
-      
+
       // Check author from detailed data
       const details = blogDetails[item.id];
       const authorMatch = details?.author?.toLowerCase().includes(search);
-      
+
       // Return true if any field matches
       return titleMatch || descriptionMatch || authorMatch;
     });
-    
+
     // Update the UI with filtered results
     setData(filteredResults);
   };
@@ -515,11 +515,11 @@ const Blog = () => {
           formattedSize,
           name: file.name,
         });
-        
+
         // Upload thumbnail directly to Firebase
         const firebaseBackend = getFirebaseBackend();
         toast.loading("Uploading thumbnail...", { id: "uploading" });
-        
+
         firebaseBackend.uploadBlogImage(file)
           .then((downloadURL: string) => {
             validation.setFieldValue("ImageUrl", downloadURL);
@@ -531,7 +531,7 @@ const Blog = () => {
             toast.dismiss("uploading");
             toast.success("Thumbnail uploaded successfully");
           })
-          .catch((error : any) => {
+          .catch((error: unknown) => {
             console.error("Error uploading thumbnail:", error);
             toast.dismiss("uploading");
             toast.error("Failed to upload thumbnail");
@@ -548,11 +548,11 @@ const Blog = () => {
           };
           validation.setFieldValue("Sections", updatedSections);
         }
-        
+
         // Upload section image directly to Firebase
         const firebaseBackend = getFirebaseBackend();
         toast.loading("Uploading image...", { id: "uploading" });
-        
+
         firebaseBackend.uploadBlogImage(file)
           .then((downloadURL: string) => {
             const updatedSections = [...validation.values.Sections];
@@ -568,7 +568,7 @@ const Blog = () => {
             toast.dismiss("uploading");
             toast.success("Section image uploaded successfully");
           })
-          .catch((error: any) => {
+          .catch((error: unknown) => {
             console.error("Error uploading section image:", error);
             toast.dismiss("uploading");
             toast.error("Failed to upload section image");
@@ -629,9 +629,9 @@ const Blog = () => {
           {isViewMode ? (
             <div className="p-3 border rounded-md bg-white dark:bg-zink-600 dark:border-zink-500">
               {section.content && (
-                <img 
-                  src={section.content} 
-                  alt="Section image" 
+                <img
+                  src={section.content}
+                  alt="Section image"
                   className="max-w-full h-auto max-h-40"
                 />
               )}
@@ -664,10 +664,10 @@ const Blog = () => {
                     <div className="flex p-2">
                       <div className="shrink-0 me-3">
                         <div className="p-2 rounded-md size-14 bg-white dark:bg-zink-600">
-                          <img 
-                            className="block w-full h-full rounded-md" 
-                            src={section.previewUrl || section.content} 
-                            alt="Section image" 
+                          <img
+                            className="block w-full h-full rounded-md"
+                            src={section.previewUrl || section.content}
+                            alt="Section image"
                           />
                         </div>
                       </div>
@@ -798,8 +798,8 @@ const Blog = () => {
               </div>
             )}
           {!isViewMode &&
-          validation.touched.ImageUrl &&
-          validation.errors.ImageUrl ? (
+            validation.touched.ImageUrl &&
+            validation.errors.ImageUrl ? (
             <p className="text-red-400">{String(validation.errors.ImageUrl)}</p>
           ) : null}
         </div>
@@ -824,8 +824,8 @@ const Blog = () => {
             />
           )}
           {!isViewMode &&
-          validation.touched.Title &&
-          validation.errors.Title ? (
+            validation.touched.Title &&
+            validation.errors.Title ? (
             <p className="text-red-400">{validation.errors.Title as string}</p>
           ) : null}
         </div>
@@ -850,8 +850,8 @@ const Blog = () => {
             ></textarea>
           )}
           {!isViewMode &&
-          validation.touched.Description &&
-          validation.errors.Description ? (
+            validation.touched.Description &&
+            validation.errors.Description ? (
             <p className="text-red-400">
               {validation.errors.Description as string}
             </p>
@@ -949,9 +949,9 @@ const Blog = () => {
                   </label>
                   {renderSectionContent(section, index)}
                   {!isViewMode &&
-                  validation.touched.Sections &&
-                  validation.errors.Sections &&
-                  (validation.errors.Sections as any)[index]?.content ? (
+                    validation.touched.Sections &&
+                    validation.errors.Sections &&
+                    (validation.errors.Sections as any)[index]?.content ? (
                     <p className="text-red-400">
                       {(validation.errors.Sections as any)[index]?.content}
                     </p>
@@ -1092,9 +1092,9 @@ const Blog = () => {
                               <div className="flex items-center gap-3">
                                 <div className="size-10 rounded-md bg-slate-100 dark:bg-zink-600 shrink-0">
                                   {item.thumbnail && (
-                                    <img 
-                                      src={item.thumbnail} 
-                                      alt={item.title} 
+                                    <img
+                                      src={item.thumbnail}
+                                      alt={item.title}
                                       className="h-10 w-10 object-cover rounded-md"
                                     />
                                   )}
@@ -1105,16 +1105,16 @@ const Blog = () => {
                               </div>
                             </td>
                             <td className="px-6 py-4 text-sm text-slate-500 dark:text-zink-200">
-                              {item.description?.length > 100 
-                                ? `${item.description.substring(0, 100)}...` 
+                              {item.description?.length > 100
+                                ? `${item.description.substring(0, 100)}...`
                                 : item.description}
                             </td>
                             <td className="px-6 py-4 text-sm text-slate-500 dark:text-zink-200">
                               {details.author || item.author || "Unknown"}
                             </td>
                             <td className="px-6 py-4 text-sm text-slate-500 dark:text-zink-200">
-                              {details.lastUpdatedAt 
-                                ? new Date(details.lastUpdatedAt).toLocaleDateString() 
+                              {details.lastUpdatedAt
+                                ? new Date(details.lastUpdatedAt).toLocaleDateString()
                                 : new Date(item.createdAt).toLocaleDateString()}
                             </td>
                             <td className="relative px-6 py-4 text-center text-sm font-medium">
@@ -1128,7 +1128,7 @@ const Blog = () => {
                                 >
                                   <Eye className="size-4" />
                                 </button>
-                                
+
                                 {/* Edit button */}
                                 <button
                                   type="button"
@@ -1138,7 +1138,7 @@ const Blog = () => {
                                 >
                                   <FileEdit className="size-4" />
                                 </button>
-                                
+
                                 {/* Delete button */}
                                 <button
                                   type="button"
@@ -1178,34 +1178,32 @@ const Blog = () => {
                 <li>
                   <button
                     type="button"
-                    className={`inline-flex items-center justify-center h-8 px-3 transition-all duration-150 ease-linear border rounded ${
-                      currentPage <= 1 
-                      ? "text-slate-400 dark:text-zink-300 cursor-not-allowed border-slate-200 dark:border-zink-500 bg-white dark:bg-zink-700" 
+                    className={`inline-flex items-center justify-center h-8 px-3 transition-all duration-150 ease-linear border rounded ${currentPage <= 1
+                      ? "text-slate-400 dark:text-zink-300 cursor-not-allowed border-slate-200 dark:border-zink-500 bg-white dark:bg-zink-700"
                       : "border-blue-500 dark:border-blue-500 text-blue-500 dark:text-blue-400 hover:text-white dark:hover:text-white hover:bg-blue-600 dark:hover:bg-blue-600 focus:bg-blue-600 dark:focus:bg-blue-600 focus:text-white dark:focus:text-white bg-white dark:bg-zink-700"
-                    }`}
+                      }`}
                     onClick={() => currentPage > 1 && setCurrentPage(1)}
                     disabled={currentPage <= 1}
                   >
                     <ChevronsLeft className="size-4 rtl:rotate-180" />
                   </button>
                 </li>
-                
+
                 {/* Previous button */}
                 <li>
                   <button
                     type="button"
-                    className={`inline-flex items-center justify-center h-8 px-3 transition-all duration-150 ease-linear border rounded ${
-                      currentPage <= 1 
-                      ? "text-slate-400 dark:text-zink-300 cursor-not-allowed border-slate-200 dark:border-zink-500 bg-white dark:bg-zink-700" 
+                    className={`inline-flex items-center justify-center h-8 px-3 transition-all duration-150 ease-linear border rounded ${currentPage <= 1
+                      ? "text-slate-400 dark:text-zink-300 cursor-not-allowed border-slate-200 dark:border-zink-500 bg-white dark:bg-zink-700"
                       : "border-blue-500 dark:border-blue-500 text-blue-500 dark:text-blue-400 hover:text-white dark:hover:text-white hover:bg-blue-600 dark:hover:bg-blue-600 focus:bg-blue-600 dark:focus:bg-blue-600 focus:text-white dark:focus:text-white bg-white dark:bg-zink-700"
-                    }`}
+                      }`}
                     onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
                     disabled={currentPage <= 1}
                   >
                     <ChevronLeft className="size-4 mr-1 rtl:rotate-180" /> Prev
                   </button>
                 </li>
-                
+
                 {/* Page numbers */}
                 {Array.from({ length: Math.min(5, pageCount) }, (_, i) => {
                   // Show pages around current page
@@ -1223,16 +1221,15 @@ const Blog = () => {
                     // Otherwise show current page and 2 pages on each side
                     pageNum = currentPage - 2 + i;
                   }
-                  
+
                   return (
                     <li key={pageNum}>
                       <button
                         type="button"
-                        className={`inline-flex items-center justify-center h-8 px-3 transition-all duration-150 ease-linear border rounded ${
-                          currentPage === pageNum 
-                          ? "text-white bg-blue-600 border-blue-600 hover:text-white dark:text-white dark:bg-blue-600 dark:border-blue-600 dark:hover:text-white" 
+                        className={`inline-flex items-center justify-center h-8 px-3 transition-all duration-150 ease-linear border rounded ${currentPage === pageNum
+                          ? "text-white bg-blue-600 border-blue-600 hover:text-white dark:text-white dark:bg-blue-600 dark:border-blue-600 dark:hover:text-white"
                           : "bg-white dark:bg-zink-700 border-blue-500 dark:border-blue-500 text-blue-500 dark:text-blue-400 hover:text-white dark:hover:text-white hover:bg-blue-600 dark:hover:bg-blue-600 focus:bg-blue-600 dark:focus:bg-blue-600 focus:text-white dark:focus:text-white"
-                        }`}
+                          }`}
                         onClick={() => setCurrentPage(pageNum)}
                       >
                         {pageNum}
@@ -1240,32 +1237,30 @@ const Blog = () => {
                     </li>
                   );
                 })}
-                
+
                 {/* Next button */}
                 <li>
                   <button
                     type="button"
-                    className={`inline-flex items-center justify-center h-8 px-3 transition-all duration-150 ease-linear border rounded ${
-                      currentPage >= pageCount 
-                      ? "text-slate-400 dark:text-zink-300 cursor-not-allowed border-slate-200 dark:border-zink-500 bg-white dark:bg-zink-700" 
+                    className={`inline-flex items-center justify-center h-8 px-3 transition-all duration-150 ease-linear border rounded ${currentPage >= pageCount
+                      ? "text-slate-400 dark:text-zink-300 cursor-not-allowed border-slate-200 dark:border-zink-500 bg-white dark:bg-zink-700"
                       : "border-blue-500 dark:border-blue-500 text-blue-500 dark:text-blue-400 hover:text-white dark:hover:text-white hover:bg-blue-600 dark:hover:bg-blue-600 focus:bg-blue-600 dark:focus:bg-blue-600 focus:text-white dark:focus:text-white bg-white dark:bg-zink-700"
-                    }`}
+                      }`}
                     onClick={() => currentPage < pageCount && setCurrentPage(currentPage + 1)}
                     disabled={currentPage >= pageCount}
                   >
                     Next <ChevronRight className="size-4 ml-1 rtl:rotate-180" />
                   </button>
                 </li>
-                
+
                 {/* Last page button */}
                 <li>
                   <button
                     type="button"
-                    className={`inline-flex items-center justify-center h-8 px-3 transition-all duration-150 ease-linear border rounded ${
-                      currentPage >= pageCount 
-                      ? "text-slate-400 dark:text-zink-300 cursor-not-allowed border-slate-200 dark:border-zink-500 bg-white dark:bg-zink-700" 
+                    className={`inline-flex items-center justify-center h-8 px-3 transition-all duration-150 ease-linear border rounded ${currentPage >= pageCount
+                      ? "text-slate-400 dark:text-zink-300 cursor-not-allowed border-slate-200 dark:border-zink-500 bg-white dark:bg-zink-700"
                       : "border-blue-500 dark:border-blue-500 text-blue-500 dark:text-blue-400 hover:text-white dark:hover:text-white hover:bg-blue-600 dark:hover:bg-blue-600 focus:bg-blue-600 dark:focus:bg-blue-600 focus:text-white dark:focus:text-white bg-white dark:bg-zink-700"
-                    }`}
+                      }`}
                     onClick={() => currentPage < pageCount && setCurrentPage(pageCount)}
                     disabled={currentPage >= pageCount}
                   >

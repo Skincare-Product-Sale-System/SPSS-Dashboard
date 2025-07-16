@@ -21,7 +21,7 @@ const TopSellingProducts = () => {
 
     // Transform data for display
     const products = bestSellers?.items || [];
-    
+
     // Function to convert image URL to base64
     const getBase64FromUrl = async (url: string): Promise<string> => {
         try {
@@ -38,28 +38,28 @@ const TopSellingProducts = () => {
             return '';
         }
     };
-    
+
     // Function to export data to Excel
     const exportToExcel = () => {
         if (!products || products.length === 0) return;
-        
+
         try {
             // Create workbook and worksheet
             const workbook = XLSX.utils.book_new();
             const worksheet = XLSX.utils.aoa_to_sheet([]);
-            
+
             // Add title and timestamp
             XLSX.utils.sheet_add_aoa(worksheet, [
                 ["BÁO CÁO SẢN PHẨM BÁN CHẠY"],
                 [`Xuất dữ liệu lúc: ${new Date().toLocaleString('vi-VN')}`],
                 [""]
             ], { origin: "A1" });
-            
+
             // Add headers
             XLSX.utils.sheet_add_aoa(worksheet, [
                 ["STT", "Tên sản phẩm", "Giá thị trường", "Giá bán", "Giảm giá (%)", "Đánh giá", "Mã sản phẩm"]
             ], { origin: "A4" });
-            
+
             // Set column widths
             worksheet['!cols'] = [
                 { wch: 5 },   // STT
@@ -70,12 +70,12 @@ const TopSellingProducts = () => {
                 { wch: 15 },  // Đánh giá
                 { wch: 20 }   // Mã sản phẩm
             ];
-            
+
             // Add data rows
             for (let i = 0; i < products.length; i++) {
                 const product = products[i];
                 const rowIndex = i + 5; // Start from row 5 (after headers)
-                
+
                 XLSX.utils.sheet_add_aoa(worksheet, [[
                     i + 1,
                     product.name,
@@ -86,13 +86,13 @@ const TopSellingProducts = () => {
                     product.id
                 ]], { origin: `A${rowIndex}` });
             }
-            
+
             // Add the worksheet to the workbook
             XLSX.utils.book_append_sheet(workbook, worksheet, 'Sản phẩm bán chạy');
-            
+
             // Generate Excel file and download
             XLSX.writeFile(workbook, 'san_pham_ban_chay.xlsx');
-            
+
         } catch (error) {
             console.error('Error exporting to Excel:', error);
             alert('Có lỗi khi xuất Excel. Vui lòng thử lại sau.');
@@ -109,7 +109,7 @@ const TopSellingProducts = () => {
                         </div>
                         <div className="flex items-center gap-2">
                             {!loading && products.length > 0 && (
-                                <button 
+                                <button
                                     onClick={exportToExcel}
                                     className="flex items-center px-3 py-1.5 text-sm font-medium text-white bg-custom-500 border border-transparent rounded-md hover:bg-custom-600 focus:outline-none"
                                 >
@@ -122,7 +122,7 @@ const TopSellingProducts = () => {
                                     <MoreVertical className="inline-block size-4"></MoreVertical>
                                 </Dropdown.Trigger>
 
-                                <Dropdown.Content placement="right-end" className="absolute z-50 py-2 mt-1 ltr:text-left rtl:text-right list-none bg-white rounded-md shadow-md dropdown-menu min-w-[10rem] dark:bg-zink-600" aria-labelledby="sellingProductDropdown">
+                                <Dropdown.Content placement="bottom-start" className="absolute z-50 py-2 mt-1 ltr:text-left rtl:text-right list-none bg-white rounded-md shadow-md dropdown-menu min-w-[10rem] dark:bg-zink-600" aria-labelledby="sellingProductDropdown">
                                     <li>
                                         <Link className="block px-4 py-1.5 text-base transition-all duration-200 ease-linear text-slate-600 dropdown-item hover:bg-slate-100 hover:text-slate-500 focus:bg-slate-100 focus:text-slate-500 dark:text-zink-100 dark:hover:bg-zink-500 dark:hover:text-zink-200 dark:focus:bg-zink-500 dark:focus:text-zink-200" to="#!">1 Tuần</Link>
                                     </li>
@@ -149,7 +149,7 @@ const TopSellingProducts = () => {
                     ) : error ? (
                         <div className="text-center py-4 text-red-500">
                             <p>Lỗi tải sản phẩm: {error}</p>
-                            <button 
+                            <button
                                 className="mt-2 px-4 py-2 bg-primary-500 text-white rounded"
                                 onClick={() => dispatch(fetchBestSellers({ pageNumber: 1, pageSize: 6 }))}
                             >

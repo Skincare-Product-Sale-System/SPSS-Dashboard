@@ -26,6 +26,15 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { toast } from 'react-hot-toast';
 
+// Add custom styles to ensure dropdowns in tables are visible
+const tableDropdownStyles = `
+  .table-dropdown-content {
+    position: fixed !important;
+    z-index: 9999 !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  }
+`;
+
 const formatDate = (dateString: string) => {
     if (!dateString) return '';
     return new Date(dateString).toLocaleDateString('vi-VN', {
@@ -67,7 +76,7 @@ const getStatusLabel = (status: string) => {
 // Add this Status component definition before the Orders component
 const Status = ({ item }: { item: string }) => {
     let statusClass = "";
-    
+
     switch (item) {
         case "Processing":
             statusClass = "bg-yellow-100 text-yellow-500 border-yellow-200 dark:bg-yellow-500/20 dark:border-yellow-500/20";
@@ -93,7 +102,7 @@ const Status = ({ item }: { item: string }) => {
         default:
             statusClass = "bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-500/20 dark:border-slate-500/20";
     }
-    
+
     return (
         <span className={`px-2.5 py-0.5 text-xs inline-block font-medium rounded border ${statusClass}`}>
             {getStatusLabel(item)}
@@ -104,12 +113,12 @@ const Status = ({ item }: { item: string }) => {
 const Orders = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch<any>();
-    
+
     const [currentPage, setCurrentPage] = useState(1);
     const [filteredData, setFilteredData] = useState<any[]>([]);
     const [activeStatus, setActiveStatus] = useState<string | null>(null);
     const pageSize = 10; // Display page size
-    
+
     // Updated selector to work with the new order reducer structure
     const orderSelector = createSelector(
         (state: any) => state.order,
@@ -142,7 +151,7 @@ const Orders = () => {
         console.log("Orders data updated:", orders);
         if (orders && orders.length > 0) {
             setAllOrders(orders);
-            
+
             // Apply status filter if active
             if (activeStatus) {
                 const filtered = orders.filter((order: any) => order.status === activeStatus);
@@ -212,7 +221,7 @@ const Orders = () => {
                 if (item.id && item.id.substring(0, 8).toLowerCase().includes(search)) {
                     return true;
                 }
-                
+
                 // Check order date
                 if (item.createdTime) {
                     const formattedDate = formatDate(item.createdTime).toLowerCase();
@@ -220,16 +229,16 @@ const Orders = () => {
                         return true;
                     }
                 }
-                
+
                 // Check product names
                 if (item.orderDetails && Array.isArray(item.orderDetails)) {
-                    const hasMatchingProduct = item.orderDetails.some((product: any) => 
-                        product.productName && 
+                    const hasMatchingProduct = item.orderDetails.some((product: any) =>
+                        product.productName &&
                         product.productName.toLowerCase().includes(search)
                     );
                     if (hasMatchingProduct) return true;
                 }
-                
+
                 // Check order total
                 if (typeof item.orderTotal === 'number') {
                     const totalAsString = item.orderTotal.toString();
@@ -237,15 +246,15 @@ const Orders = () => {
                         return true;
                     }
                 }
-                
+
                 // Check status
                 if (item.status && getStatusLabel(item.status).toLowerCase().includes(search)) {
                     return true;
                 }
-                
+
                 return false;
             });
-            
+
             // Apply active status filter to search results if needed
             if (activeStatus) {
                 setFilteredData(searchFiltered.filter((order: any) => order.status === activeStatus));
@@ -280,6 +289,9 @@ const Orders = () => {
 
     return (
         <React.Fragment>
+            {/* Add style tag for custom dropdown styling */}
+            <style>{tableDropdownStyles}</style>
+
             <BreadCrumb title="Đơn Hàng" pageTitle="Ecommerce" />
             <DeleteModal
                 show={deleteModal}
@@ -308,77 +320,70 @@ const Orders = () => {
                                 <div className="flex flex-wrap gap-2">
                                     <button
                                         type="button"
-                                        className={`px-3 py-1.5 text-xs font-medium rounded-md ${
-                                            activeStatus === null 
-                                                ? 'bg-custom-500 text-white' 
-                                                : 'bg-slate-100 text-slate-500 dark:bg-zink-600 dark:text-zink-200'
-                                        }`}
+                                        className={`px-3 py-1.5 text-xs font-medium rounded-md ${activeStatus === null
+                                            ? 'bg-custom-500 text-white'
+                                            : 'bg-slate-100 text-slate-500 dark:bg-zink-600 dark:text-zink-200'
+                                            }`}
                                         onClick={() => handleStatusFilter(null)}
                                     >
                                         Tất Cả
                                     </button>
                                     <button
                                         type="button"
-                                        className={`px-3 py-1.5 text-xs font-medium rounded-md ${
-                                            activeStatus === 'Processing' 
-                                                ? 'bg-yellow-500 text-white' 
-                                                : 'bg-yellow-100 text-yellow-500 dark:bg-yellow-500/20 dark:text-yellow-400'
-                                        }`}
+                                        className={`px-3 py-1.5 text-xs font-medium rounded-md ${activeStatus === 'Processing'
+                                            ? 'bg-yellow-500 text-white'
+                                            : 'bg-yellow-100 text-yellow-500 dark:bg-yellow-500/20 dark:text-yellow-400'
+                                            }`}
                                         onClick={() => handleStatusFilter('Processing')}
                                     >
                                         Đang Xử Lý
                                     </button>
                                     <button
                                         type="button"
-                                        className={`px-3 py-1.5 text-xs font-medium rounded-md ${
-                                            activeStatus === 'Awaiting Payment' 
-                                                ? 'bg-sky-500 text-white' 
-                                                : 'bg-sky-100 text-sky-500 dark:bg-sky-500/20 dark:text-sky-400'
-                                        }`}
+                                        className={`px-3 py-1.5 text-xs font-medium rounded-md ${activeStatus === 'Awaiting Payment'
+                                            ? 'bg-sky-500 text-white'
+                                            : 'bg-sky-100 text-sky-500 dark:bg-sky-500/20 dark:text-sky-400'
+                                            }`}
                                         onClick={() => handleStatusFilter('Awaiting Payment')}
                                     >
                                         Chờ Thanh Toán
                                     </button>
                                     <button
                                         type="button"
-                                        className={`px-3 py-1.5 text-xs font-medium rounded-md ${
-                                            activeStatus === 'Pending' 
-                                                ? 'bg-orange-500 text-white' 
-                                                : 'bg-orange-100 text-orange-500 dark:bg-orange-500/20 dark:text-orange-400'
-                                        }`}
+                                        className={`px-3 py-1.5 text-xs font-medium rounded-md ${activeStatus === 'Pending'
+                                            ? 'bg-orange-500 text-white'
+                                            : 'bg-orange-100 text-orange-500 dark:bg-orange-500/20 dark:text-orange-400'
+                                            }`}
                                         onClick={() => handleStatusFilter('Pending')}
                                     >
                                         Đang Chờ
                                     </button>
                                     <button
                                         type="button"
-                                        className={`px-3 py-1.5 text-xs font-medium rounded-md ${
-                                            activeStatus === 'Shipping' 
-                                                ? 'bg-purple-500 text-white' 
-                                                : 'bg-purple-100 text-purple-500 dark:bg-purple-500/20 dark:text-purple-400'
-                                        }`}
+                                        className={`px-3 py-1.5 text-xs font-medium rounded-md ${activeStatus === 'Shipping'
+                                            ? 'bg-purple-500 text-white'
+                                            : 'bg-purple-100 text-purple-500 dark:bg-purple-500/20 dark:text-purple-400'
+                                            }`}
                                         onClick={() => handleStatusFilter('Shipping')}
                                     >
                                         Đang Giao
                                     </button>
                                     <button
                                         type="button"
-                                        className={`px-3 py-1.5 text-xs font-medium rounded-md ${
-                                            activeStatus === 'Delivered' 
-                                                ? 'bg-green-500 text-white' 
-                                                : 'bg-green-100 text-green-500 dark:bg-green-500/20 dark:text-green-400'
-                                        }`}
+                                        className={`px-3 py-1.5 text-xs font-medium rounded-md ${activeStatus === 'Delivered'
+                                            ? 'bg-green-500 text-white'
+                                            : 'bg-green-100 text-green-500 dark:bg-green-500/20 dark:text-green-400'
+                                            }`}
                                         onClick={() => handleStatusFilter('Delivered')}
                                     >
                                         Đã Giao
                                     </button>
                                     <button
                                         type="button"
-                                        className={`px-3 py-1.5 text-xs font-medium rounded-md ${
-                                            activeStatus === 'Cancelled' 
-                                                ? 'bg-red-500 text-white' 
-                                                : 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400'
-                                        }`}
+                                        className={`px-3 py-1.5 text-xs font-medium rounded-md ${activeStatus === 'Cancelled'
+                                            ? 'bg-red-500 text-white'
+                                            : 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400'
+                                            }`}
                                         onClick={() => handleStatusFilter('Cancelled')}
                                     >
                                         Đã Hủy
@@ -421,10 +426,10 @@ const Orders = () => {
                                                             order.orderDetails.map((product: any, idx: number) => (
                                                                 <div key={idx} className="flex items-center gap-2 mb-2 last:mb-0">
                                                                     {product.productImage && (
-                                                                        <img 
-                                                                            src={product.productImage} 
-                                                                            alt={product.productName} 
-                                                                            className="h-10 w-10 object-cover rounded flex-shrink-0" 
+                                                                        <img
+                                                                            src={product.productImage}
+                                                                            alt={product.productName}
+                                                                            className="h-10 w-10 object-cover rounded flex-shrink-0"
                                                                         />
                                                                     )}
                                                                     <div className="truncate max-w-[180px] text-sm">
@@ -444,29 +449,29 @@ const Orders = () => {
                                                 <td className="px-6 py-3 border-y border-slate-200">
                                                     <Dropdown className="relative">
                                                         <Dropdown.Trigger id={`orderAction${index}`} data-bs-toggle="dropdown" className="flex items-center justify-center size-[30px] p-0 text-slate-500 btn bg-slate-100 hover:text-white hover:bg-slate-600 focus:text-white focus:bg-slate-600 focus:ring focus:ring-slate-100 active:text-white active:bg-slate-600 active:ring active:ring-slate-100 dark:bg-slate-500/20 dark:text-slate-400 dark:hover:bg-slate-500 dark:hover:text-white dark:focus:bg-slate-500 dark:focus:text-white dark:active:bg-slate-500 dark:active:text-white dark:ring-slate-400/20">
-                                                        <MoreHorizontal className="size-3" />
-                                                    </Dropdown.Trigger>
-                                                    <Dropdown.Content placement={index > 5 ? "top-end" : "bottom-end"} className="absolute z-50 py-2 mt-1 ltr:text-left rtl:text-right list-none bg-white rounded-md shadow-md min-w-[10rem] dark:bg-zink-600" aria-labelledby={`orderAction${index}`}>
-                                                        <li>
-                                                            <Link 
-                                                                to={`/apps-ecommerce-order-overview?id=${order.id}`} 
-                                                                className="block px-4 py-1.5 text-base transition-all duration-200 ease-linear text-slate-600 hover:bg-slate-100 hover:text-slate-500 focus:bg-slate-100 focus:text-slate-500 dark:text-zink-100 dark:hover:bg-zink-500 dark:hover:text-zink-200 dark:focus:bg-zink-500 dark:focus:text-zink-200"
-                                                            >
-                                                                <Eye className="inline-block size-3 ltr:mr-1 rtl:ml-1" /> <span className="align-middle">Xem Chi Tiết</span>
-                                                            </Link>
-                                                        </li>
-                                                        <li>
-                                                            <Link 
-                                                                to="#!" 
-                                                                onClick={() => handleDropdownAction("delete", order)}
-                                                                className="block px-4 py-1.5 text-base transition-all duration-200 ease-linear text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:bg-slate-100 focus:text-slate-900 dark:text-zink-100 dark:hover:bg-zink-500 dark:hover:text-zink-50 dark:focus:bg-zink-500 dark:focus:text-zink-50"
-                                                            >
-                                                                <Trash2 className="inline-block size-3 ltr:mr-1 rtl:ml-1" /> <span className="align-middle">Xóa</span>
-                                                            </Link>
-                                                        </li>
-                                                    </Dropdown.Content>
-                                                </Dropdown>
-                                            </td>
+                                                            <MoreHorizontal className="size-3" />
+                                                        </Dropdown.Trigger>
+                                                        <Dropdown.Content placement={index > 5 ? "top-start" : "bottom-start"} className="absolute z-[9999] py-2 mt-1 ltr:text-left rtl:text-right list-none bg-white rounded-md shadow-md min-w-[10rem] dark:bg-zink-600 !transform-none table-dropdown-content" aria-labelledby={`orderAction${index}`}>
+                                                            <li>
+                                                                <Link
+                                                                    to={`/apps-ecommerce-order-overview?id=${order.id}`}
+                                                                    className="block px-4 py-1.5 text-base transition-all duration-200 ease-linear text-slate-600 hover:bg-slate-100 hover:text-slate-500 focus:bg-slate-100 focus:text-slate-500 dark:text-zink-100 dark:hover:bg-zink-500 dark:hover:text-zink-200 dark:focus:bg-zink-500 dark:focus:text-zink-200"
+                                                                >
+                                                                    <Eye className="inline-block size-3 ltr:mr-1 rtl:ml-1" /> <span className="align-middle">Xem Chi Tiết</span>
+                                                                </Link>
+                                                            </li>
+                                                            <li>
+                                                                <Link
+                                                                    to="#!"
+                                                                    onClick={() => handleDropdownAction("delete", order)}
+                                                                    className="block px-4 py-1.5 text-base transition-all duration-200 ease-linear text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:bg-slate-100 focus:text-slate-900 dark:text-zink-100 dark:hover:bg-zink-500 dark:hover:text-zink-50 dark:focus:bg-zink-500 dark:focus:text-zink-50"
+                                                                >
+                                                                    <Trash2 className="inline-block size-3 ltr:mr-1 rtl:ml-1" /> <span className="align-middle">Xóa</span>
+                                                                </Link>
+                                                            </li>
+                                                        </Dropdown.Content>
+                                                    </Dropdown>
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -504,7 +509,7 @@ const Orders = () => {
                                         } else {
                                             pageNum = currentPage - 2 + i;
                                         }
-                                        
+
                                         return (
                                             <li key={i}>
                                                 <button
@@ -533,8 +538,8 @@ const Orders = () => {
                             <Search className="size-6 mx-auto text-sky-500 fill-sky-100 dark:sky-500/20" />
                             <h5 className="mt-2 mb-1">Xin lỗi! Không tìm thấy kết quả</h5>
                             <p className="mb-0 text-slate-500 dark:text-zink-200">
-                                {activeStatus 
-                                    ? `Không tìm thấy đơn hàng nào có trạng thái "${getStatusLabel(activeStatus)}".` 
+                                {activeStatus
+                                    ? `Không tìm thấy đơn hàng nào có trạng thái "${getStatusLabel(activeStatus)}".`
                                     : "Không tìm thấy đơn hàng nào phù hợp với tìm kiếm của bạn."}
                             </p>
                         </div>

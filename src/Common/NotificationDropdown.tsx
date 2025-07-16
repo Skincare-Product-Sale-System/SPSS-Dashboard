@@ -33,7 +33,7 @@ const NotificationDropdown = () => {
                         <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-sky-500"></span>
                     </span>
                 </Dropdown.Trigger>
-                <Dropdown.Content placement="right-end" className="absolute z-50 ltr:text-left rtl:text-right bg-white rounded-md shadow-md !top-4 dropdown-menu min-w-[20rem] lg:min-w-[26rem] dark:bg-zink-600" aria-labelledby="notificationDropdown">
+                <Dropdown.Content placement="start-end" className="absolute z-50 ltr:text-left rtl:text-right bg-white rounded-md shadow-md !top-4 dropdown-menu min-w-[20rem] lg:min-w-[26rem] dark:bg-zink-600" aria-labelledby="notificationDropdown">
                     <div className="p-4">
                         <h6 className="mb-4 text-16">Notifications <span className="inline-flex items-center justify-center size-5 ml-1 text-[11px] font-medium border rounded-full text-white bg-orange-500 border-orange-500">15</span></h6>
                         <ul className="flex flex-wrap w-full p-1 mb-2 text-sm font-medium text-center rounded-md filter-btns text-slate-500 bg-slate-100 nav-tabs dark:bg-zink-500 dark:text-zink-200">
