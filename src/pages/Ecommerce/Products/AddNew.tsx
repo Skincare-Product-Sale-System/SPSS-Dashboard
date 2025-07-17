@@ -126,7 +126,7 @@ export default function AddNew() {
   const fetchOptions = async () => {
     try {
       // Fetch brands
-      const brandsResponse = await axios.get("https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/brands");
+      const brandsResponse = await axios.get("https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/brands?pageSize=1000");
       if (brandsResponse.data && brandsResponse.data.items) {
         setBrandOptions(
           brandsResponse.data.items.map((item: any) => ({
@@ -137,7 +137,7 @@ export default function AddNew() {
       }
 
       // Fetch skin types
-      const skinTypesResponse = await axios.get("https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/skin-types");
+      const skinTypesResponse = await axios.get("https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/skin-types?pageSize=1000");
       if (skinTypesResponse.data && skinTypesResponse.data.items) {
         setSkinTypeOptions(
           skinTypesResponse.data.items.map((item: any) => ({
@@ -148,7 +148,7 @@ export default function AddNew() {
       }
 
       // Fetch categories - preserve hierarchy for nested categories
-      const categoriesResponse = await axios.get("https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/product-categories");
+      const categoriesResponse = await axios.get("https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/product-categories?pageSize=1000");
       if (categoriesResponse.data && categoriesResponse.data.items) {
         // Process categories to create a flat list with proper indentation for the dropdown
         const processedCategories = processCategoriesForDropdown(categoriesResponse.data.items);
@@ -156,7 +156,7 @@ export default function AddNew() {
       }
 
       // Fetch variation options - fix the data structure access
-      const variationOptionsResponse = await axios.get("https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/variation-options");
+      const variationOptionsResponse = await axios.get("https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/variation-options?pageSize=1000");
       console.log("Variation options response:", variationOptionsResponse.data);
 
       // Check if the response has the expected structure
@@ -170,7 +170,7 @@ export default function AddNew() {
       }
 
       // Fetch variations
-      const variationsResponse = await axios.get("https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/variations");
+      const variationsResponse = await axios.get("https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/variations?pageSize=1000");
       console.log("Variations response:", variationsResponse.data);
 
       if (variationsResponse.data && variationsResponse.data.success && variationsResponse.data.data && variationsResponse.data.data.items) {
