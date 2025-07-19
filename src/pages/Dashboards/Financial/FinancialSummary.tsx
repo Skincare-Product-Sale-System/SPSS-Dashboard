@@ -48,7 +48,8 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({ data }) => {
     return formatPercentage(value);
   };
 
-  const summaryCards = [
+  // First row cards - financial metrics
+  const financialCards = [
     {
       title: 'Tổng Doanh Thu',
       value: formatCurrency(data.totalRevenue),
@@ -80,6 +81,20 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({ data }) => {
       description: 'So với kỳ trước'
     },
     {
+      title: 'Giảm Giá',
+      value: formatCurrency(data.discountAmount),
+      icon: <TrendingDown className="h-6 w-6 text-red-600" />,
+      iconBg: 'bg-red-100',
+      textColor: 'text-red-600',
+      trend: getTrendDirection(data.discountRate),
+      trendValue: formatTrendValue(data.discountRate),
+      description: 'So với kỳ trước'
+    }
+  ];
+
+  // Second row cards - operational metrics
+  const operationalCards = [
+    {
       title: 'Chi Phí Tồn Kho',
       value: formatCurrency(data.inventoryProcurementCost),
       icon: <Archive className="h-6 w-6 text-indigo-600" />,
@@ -108,45 +123,47 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({ data }) => {
       trend: getTrendDirection(data.pendingOrderRate),
       trendValue: formatTrendValue(data.pendingOrderRate),
       description: 'So với kỳ trước'
-    },
-    {
-      title: 'Giảm Giá',
-      value: formatCurrency(data.discountAmount),
-      icon: <TrendingDown className="h-6 w-6 text-red-600" />,
-      iconBg: 'bg-red-100',
-      textColor: 'text-red-600',
-      trend: getTrendDirection(data.discountRate),
-      trendValue: formatTrendValue(data.discountRate),
-      description: 'So với kỳ trước'
     }
   ];
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-5">
-      {summaryCards.map((card, index) => (
-        <div
-          key={index}
-          className={
-            `bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-between h-full transition-shadow duration-300 hover:shadow-md`
-          }
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className={`p-2 rounded-lg ${card.iconBg} flex items-center justify-center`}>
-              {card.icon}
-            </div>
-            <div className={`text-sm font-medium ${card.textColor} flex items-center`}>
-              {card.trend === 'up' && <TrendingUp className="h-4 w-4 inline mr-1" />}
-              {card.trend === 'down' && <TrendingDown className="h-4 w-4 inline mr-1" />}
-              {card.trendValue}
-            </div>
-          </div>
-          <div className="mb-2">
-            <h3 className="text-sm font-medium text-gray-600 mb-1">{card.title}</h3>
-            <p className="text-2xl font-bold text-gray-900">{card.value}</p>
-          </div>
-          <p className="text-xs text-gray-500">{card.description}</p>
+  // Card component to avoid repetition
+  const Card = ({ card }: { card: any }) => (
+    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-between h-full transition-shadow duration-300 hover:shadow-md">
+      <div className="flex items-center justify-between mb-3">
+        <div className={`p-2 rounded-lg ${card.iconBg} flex items-center justify-center`}>
+          {card.icon}
         </div>
-      ))}
+        <div className={`text-sm font-medium ${card.textColor} flex items-center`}>
+          {card.trend === 'up' && <TrendingUp className="h-4 w-4 inline mr-1" />}
+          {card.trend === 'down' && <TrendingDown className="h-4 w-4 inline mr-1" />}
+          {card.trendValue}
+        </div>
+      </div>
+      <div className="mb-2">
+        <h3 className="text-sm font-medium text-gray-600 mb-1">{card.title}</h3>
+        <p className="text-xl md:text-2xl font-bold text-gray-900 break-words" title={card.value}>
+          {card.value}
+        </p>
+      </div>
+      <p className="text-xs text-gray-500">{card.description}</p>
+    </div>
+  );
+
+  return (
+    <div className="space-y-5">
+      {/* First row - Financial metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        {financialCards.map((card, index) => (
+          <Card key={`financial-${index}`} card={card} />
+        ))}
+      </div>
+
+      {/* Second row - Operational metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {operationalCards.map((card, index) => (
+          <Card key={`operational-${index}`} card={card} />
+        ))}
+      </div>
     </div>
   );
 };
