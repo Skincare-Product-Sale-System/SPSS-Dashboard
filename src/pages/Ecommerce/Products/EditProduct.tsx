@@ -16,7 +16,7 @@ import { ToastContainer } from 'react-toastify';
 import { Link } from "react-router-dom";
 
 // Define base URL for API
-const API_BASE_URL = "http://localhost:5041";
+const API_BASE_URL = "https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net";
 
 // Configure axios defaults
 axios.defaults.headers.common['Content-Type'] = 'application/json';
@@ -34,13 +34,13 @@ const apiClient = axios.create({
 // Add authorization interceptor
 apiClient.interceptors.request.use(
   config => {
-    // Get the auth token from localStorage
-    const authUser = localStorage.getItem('authUser');
+    // Get the auth token from sessionStorage
+    const authUser = sessionStorage.getItem('authUser');
     if (authUser) {
       try {
         const parsedAuth = JSON.parse(authUser);
-        if (parsedAuth && parsedAuth.token) {
-          config.headers['Authorization'] = `Bearer ${parsedAuth.token}`;
+        if (parsedAuth && parsedAuth.accessToken) {
+          config.headers['Authorization'] = `Bearer ${parsedAuth.accessToken}`;
         }
       } catch (error) {
         console.error('Error parsing auth token:', error);
@@ -80,13 +80,13 @@ apiClient.interceptors.response.use(
 
       try {
         // Attempt to refresh the token or redirect to login
-        const authUser = localStorage.getItem('authUser');
+        const authUser = sessionStorage.getItem('authUser');
         if (authUser) {
           // You can implement token refresh logic here if your API supports it
           // For now, we'll just redirect to login
 
           // Clear the current session
-          localStorage.removeItem('authUser');
+          sessionStorage.removeItem('authUser');
 
           // Redirect to login page
           window.location.href = '/login';
@@ -195,6 +195,8 @@ export default function EditProduct() {
   // Handle form initialization separately
   useEffect(() => {
     if (productData && !loading) {
+      console.log("Initializing form with product data:", productData);
+
       // Set form values based on product data
       productFormik.setValues({
         title: productData.name || '',
@@ -211,7 +213,7 @@ export default function EditProduct() {
         detailedIngredients: productData.specifications?.detailedIngredients || '',
         mainFunction: productData.specifications?.mainFunction || '',
         texture: productData.specifications?.texture || '',
-        englishName: productData.specifications?.englishName || '',
+        englishName: productData.specifications?.englishName === null ? '' : productData.specifications?.englishName || '',
         keyActiveIngredients: productData.specifications?.keyActiveIngredients || '',
         storageInstruction: productData.specifications?.storageInstruction || '',
         usageInstruction: productData.specifications?.usageInstruction || '',
@@ -222,32 +224,43 @@ export default function EditProduct() {
         tags: productData.tags?.join(', ') || ''
       });
 
-      // Set thumbnail if available
+      // Set product images from API
       if (productData.productImageUrls && productData.productImageUrls.length > 0) {
+        console.log("Product images from API:", productData.productImageUrls);
+
+        // Set thumbnail to first image
         setThumbnail({
           preview: productData.productImageUrls[0],
           file: null,
           formattedSize: "Existing image"
         });
 
-        // Set additional product images if available
-        if (productData.productImageUrls.length > 1) {
-          const additionalImages = productData.productImageUrls.slice(1).map((url: string) => ({
-            preview: url,
-            file: null,
-            formattedSize: "Existing image"
-          }));
-          setProductImages(additionalImages);
-        }
+        // Set all images as product images for display in the grid
+        const allImages = productData.productImageUrls.map((url: string) => ({
+          preview: url,
+          file: null,
+          formattedSize: "Existing image"
+        }));
+
+        setProductImages(allImages);
+        console.log("Set all product images:", allImages);
+      } else {
+        // Reset thumbnail and product images if none are available
+        setThumbnail(null);
+        setProductImages([]);
       }
 
       // Initialize variations from productData
       if (productData.variations && productData.variations.length > 0) {
-        setVariations(productData.variations.map((variation: any) => {
+        console.log("Initializing variations from API:", productData.variations);
+
+        const mappedVariations = productData.variations.map((variation: any) => {
           // Find selected options
           const selectedOptions = variation.options ?
             variation.options.filter((option: any) => option.isSelected).map((option: any) => option.id) :
             [];
+
+          console.log(`Selected options for variation ${variation.name}:`, selectedOptions);
 
           return {
             id: variation.id,
@@ -255,7 +268,10 @@ export default function EditProduct() {
             variationOptions: variation.options || [],
             variationOptionIds: selectedOptions
           };
-        }));
+        });
+
+        setVariations(mappedVariations);
+        console.log("Mapped variations:", mappedVariations);
       } else {
         // If no variations, initialize with an empty one
         setVariations([{
@@ -268,7 +284,31 @@ export default function EditProduct() {
 
       // Initialize product items from productItems
       if (productData.productItems && productData.productItems.length > 0) {
+        console.log("Initializing product items from API:", productData.productItems);
+
+        // Đảm bảo mỗi productItem có variationOptionIds không rỗng
         const items = productData.productItems.map((item: any, index: number) => {
+          // Kiểm tra và log variationOptionIds
+          if (!item.variationOptionIds || item.variationOptionIds.length === 0) {
+            console.warn(`Product item #${index + 1} has empty variationOptionIds:`, item);
+
+            // Tìm một variationOptionId từ variations nếu có
+            let defaultVariationOptionId = null;
+            if (productData.variations && productData.variations.length > 0) {
+              const firstVariation = productData.variations[0];
+              if (firstVariation.options && firstVariation.options.length > 0) {
+                const selectedOption = firstVariation.options.find((opt: any) => opt.isSelected);
+                if (selectedOption) {
+                  defaultVariationOptionId = selectedOption.id;
+                  console.log(`Using default variationOptionId for item #${index + 1}:`, defaultVariationOptionId);
+                }
+              }
+            }
+
+            // Gán variationOptionIds mặc định nếu tìm được
+            item.variationOptionIds = defaultVariationOptionId ? [defaultVariationOptionId] : [];
+          }
+
           // Create an entry in productItemImages for existing images
           if (item.imageUrl) {
             const itemKey = item.id || `temp-${index}`;
@@ -282,6 +322,11 @@ export default function EditProduct() {
             }));
           }
 
+          console.log(`Mapped product item #${index + 1}:`, {
+            id: item.id,
+            variationOptionIds: item.variationOptionIds
+          });
+
           return {
             id: item.id || `temp-${index}`,
             variationOptionIds: item.variationOptionIds || [],
@@ -294,6 +339,7 @@ export default function EditProduct() {
         });
 
         setProductItems(items);
+        console.log("Final mapped product items:", items);
       } else {
         // Initialize with an empty product item
         setProductItems([{
@@ -537,10 +583,20 @@ export default function EditProduct() {
 
   // Update the addProductItem function to use the selected variation option
   const addProductItem = () => {
+    // Tìm tất cả các variationOptionIds đã được chọn từ variations
+    const allSelectedOptionIds: string[] = [];
+    variations.forEach(variation => {
+      if (variation.variationOptionIds && variation.variationOptionIds.length > 0) {
+        allSelectedOptionIds.push(...variation.variationOptionIds);
+      }
+    });
+
+    console.log("Adding new product item with variationOptionIds:", allSelectedOptionIds);
+
     setProductItems([
       ...productItems,
       {
-        variationOptionIds: [],
+        variationOptionIds: allSelectedOptionIds,
         price: 0,
         marketPrice: 0,
         purchasePrice: 0,
@@ -616,25 +672,27 @@ export default function EditProduct() {
     const newVariations = [...variations];
 
     if (field === 'id') {
-      // When changing variation type, reset options
       newVariations[index] = {
         ...newVariations[index],
         id: value,
         variationOptions: [],
         variationOptionIds: []
       };
-    } else if (field === 'variationOptions') {
-      // This is for multi-select of options
-      newVariations[index] = {
-        ...newVariations[index],
-        variationOptions: value
-      };
     } else if (field === 'variationOptionIds') {
-      // This is for directly setting option IDs
       newVariations[index] = {
         ...newVariations[index],
         variationOptionIds: value
       };
+
+      // Cập nhật variationOptionIds cho tất cả product items khi thay đổi
+      if (value && value.length > 0) {
+        const updatedItems = productItems.map(item => ({
+          ...item,
+          variationOptionIds: value
+        }));
+        setProductItems(updatedItems);
+        console.log("Updated all product items with new variationOptionIds:", value);
+      }
     }
 
     setVariations(newVariations);
@@ -707,9 +765,14 @@ export default function EditProduct() {
     setProductItems(updatedItems);
   };
 
-  // Update the validateProductItem function to validate quantity properly
+  // Update the validateProductItem function to validate variationOptionIds
   const validateProductItem = (item: any, index: number) => {
     const errors: { [key: string]: string } = {};
+
+    // Validate variationOptionIds - thêm kiểm tra này
+    if (!item.variationOptionIds || item.variationOptionIds.length === 0) {
+      errors.variationOptionIds = "Vui lòng chọn biến thể cho sản phẩm";
+    }
 
     // Validate quantity
     if (item.quantityInStock === undefined || item.quantityInStock === null) {
@@ -787,6 +850,51 @@ export default function EditProduct() {
       setProductItemErrors(newErrors);
     }
   }, [variations]);
+
+  // Thêm useEffect mới để đảm bảo productItems luôn có variationOptionIds đúng
+  useEffect(() => {
+    // Chỉ thực hiện khi đã có dữ liệu productItems và variations
+    if (productItems.length > 0 && variations.length > 0) {
+      console.log("Running effect to ensure productItems have correct variationOptionIds");
+
+      // Tìm tất cả các variationOptionIds đã được chọn từ variations
+      const allSelectedOptionIds: string[] = [];
+      variations.forEach(variation => {
+        if (variation.variationOptionIds && variation.variationOptionIds.length > 0) {
+          allSelectedOptionIds.push(...variation.variationOptionIds);
+        }
+      });
+
+      console.log("All selected variation option IDs:", allSelectedOptionIds);
+
+      // Nếu có variationOptionIds đã chọn, đảm bảo tất cả productItems đều có các IDs này
+      if (allSelectedOptionIds.length > 0) {
+        const updatedItems = productItems.map(item => {
+          // Nếu item chưa có variationOptionIds hoặc rỗng, gán các IDs đã chọn
+          if (!item.variationOptionIds || item.variationOptionIds.length === 0) {
+            return {
+              ...item,
+              variationOptionIds: [...allSelectedOptionIds]
+            };
+          }
+          return item;
+        });
+
+        // Chỉ cập nhật state nếu có thay đổi
+        const hasChanges = updatedItems.some((item, index) => {
+          const originalItem = productItems[index];
+          if (!originalItem.variationOptionIds || !item.variationOptionIds) return true;
+          if (originalItem.variationOptionIds.length !== item.variationOptionIds.length) return true;
+          return !originalItem.variationOptionIds.every(id => item.variationOptionIds.includes(id));
+        });
+
+        if (hasChanges) {
+          console.log("Updating productItems with correct variationOptionIds:", updatedItems);
+          setProductItems(updatedItems);
+        }
+      }
+    }
+  }, [productItems, variations]);
 
   // Create a simplified form with Formik
   const productFormik = useFormik({
@@ -983,6 +1091,24 @@ export default function EditProduct() {
       setIsSubmitting(true);
       setErrorMessage("");
 
+      console.log("Starting product update with productItems:", productItems);
+
+      // Kiểm tra variationOptionIds trong productItems
+      const itemsWithEmptyVariationOptions = productItems.filter(item =>
+        !item.variationOptionIds || item.variationOptionIds.length === 0
+      );
+
+      if (itemsWithEmptyVariationOptions.length > 0) {
+        console.error("Found items with empty variationOptionIds:", itemsWithEmptyVariationOptions);
+        setErrorMessage("Vui lòng chọn biến thể cho tất cả các sản phẩm");
+        setIsSubmitting(false);
+        toast.error("Vui lòng chọn biến thể cho tất cả các sản phẩm", {
+          position: "top-right",
+          autoClose: 5000
+        });
+        return;
+      }
+
       // Get Firebase backend instance
       const firebaseBackend = getFirebaseBackend();
 
@@ -1061,10 +1187,34 @@ export default function EditProduct() {
           }
         }
 
+        // Đảm bảo variationOptionIds không rỗng
+        const safeVariationOptionIds = item.variationOptionIds && item.variationOptionIds.length > 0
+          ? item.variationOptionIds
+          : [];
+
+        // Nếu không có variationOptionIds và có variations, thì lấy ID của option đầu tiên từ variation đầu tiên
+        if (safeVariationOptionIds.length === 0 && variations.length > 0) {
+          // Tìm variation đầu tiên có options
+          const variationWithOptions = variations.find(v => v.variationOptionIds && v.variationOptionIds.length > 0);
+
+          if (variationWithOptions && variationWithOptions.variationOptionIds.length > 0) {
+            console.log(`Adding default variationOptionId to item #${index + 1}:`, variationWithOptions.variationOptionIds[0]);
+            safeVariationOptionIds.push(variationWithOptions.variationOptionIds[0]);
+          } else {
+            console.error(`Cannot find any variation options for item #${index + 1}`);
+          }
+        }
+
+        console.log(`Processed product item #${index + 1}:`, {
+          id: item.id,
+          variationOptionIds: safeVariationOptionIds,
+          imageUrl: imageUrl
+        });
+
         // Ensure all numeric values are properly formatted
         return {
           id: item.id || undefined, // Only include ID if it exists
-          variationOptionIds: item.variationOptionIds || [],
+          variationOptionIds: safeVariationOptionIds,
           imageUrl: imageUrl,
           price: Number(String(item.price).replace(/\s/g, '')),
           marketPrice: Number(String(item.marketPrice).replace(/\s/g, '')),
@@ -1078,12 +1228,17 @@ export default function EditProduct() {
         // Get all available options for this variation
         const allOptions = availableVariations.find(av => av.id === v.id)?.variationOptions || [];
 
+        console.log(`Processing variation ${v.id} with options:`, allOptions);
+        console.log(`Selected option IDs for variation ${v.id}:`, v.variationOptionIds);
+
         // Map options with isSelected flag
         const options = allOptions.map(opt => ({
           id: opt.id,
           value: opt.value,
           isSelected: v.variationOptionIds.includes(opt.id)
         }));
+
+        console.log(`Mapped options for variation ${v.id}:`, options);
 
         return {
           id: v.id,
@@ -1107,20 +1262,54 @@ export default function EditProduct() {
         productCategoryId: values.category,
         productImageUrls: allProductImageUrls,
         skinTypeIds: values.skinType || [],
-        variations: variationsData,
-        productItems: processedProductItems,
+        variations: variationsData.map(variation => ({
+          id: variation.id,
+          name: variation.name,
+          options: variation.options.map(option => ({
+            id: option.id,
+            value: option.value,
+            isSelected: option.isSelected
+          }))
+        })),
+        productItems: processedProductItems.map(item => ({
+          id: item.id,
+          variationOptionIds: item.variationOptionIds,
+          price: item.price,
+          marketPrice: item.marketPrice,
+          purchasePrice: item.purchasePrice,
+          quantityInStock: item.quantityInStock,
+          imageUrl: item.imageUrl
+        })),
         specifications: {
-          detailedIngredients: values.detailedIngredients,
-          mainFunction: values.mainFunction,
-          texture: values.texture,
-          englishName: values.englishName === null ? null : values.englishName || undefined,
-          keyActiveIngredients: values.keyActiveIngredients,
-          storageInstruction: values.storageInstruction,
-          usageInstruction: values.usageInstruction,
-          expiryDate: values.expiryDate,
-          skinIssues: values.skinIssues
+          detailedIngredients: values.detailedIngredients || "",
+          mainFunction: values.mainFunction || "",
+          texture: values.texture || "",
+          englishName: values.englishName === "" ? null : values.englishName || "",
+          keyActiveIngredients: values.keyActiveIngredients || "",
+          storageInstruction: values.storageInstruction || "",
+          usageInstruction: values.usageInstruction || "",
+          expiryDate: values.expiryDate || "",
+          skinIssues: values.skinIssues || ""
         }
       };
+
+      // Kiểm tra lại một lần nữa trước khi gửi
+      const hasEmptyVariationOptionIds = productData.productItems.some(item =>
+        !item.variationOptionIds || item.variationOptionIds.length === 0
+      );
+
+      if (hasEmptyVariationOptionIds) {
+        console.error("Still found items with empty variationOptionIds after processing:",
+          productData.productItems.filter(item => !item.variationOptionIds || item.variationOptionIds.length === 0)
+        );
+        setErrorMessage("Vui lòng chọn biến thể cho tất cả các sản phẩm");
+        setIsSubmitting(false);
+        toast.error("Vui lòng chọn biến thể cho tất cả các sản phẩm", {
+          position: "top-right",
+          autoClose: 5000
+        });
+        return;
+      }
 
       // Log request data before sending
       console.log("Product data before sending:", productData);
@@ -1146,20 +1335,107 @@ export default function EditProduct() {
         return;
       }
 
-      // Gửi trực tiếp dữ liệu sản phẩm thay vì bọc trong productDto
-      const updateProductData = productData;
+      // Kiểm tra các trường bắt buộc khác
+      if (!productData.brandId) {
+        setErrorMessage("Vui lòng chọn thương hiệu");
+        setIsSubmitting(false);
+        toast.error("Vui lòng chọn thương hiệu", {
+          position: "top-right",
+          autoClose: 5000
+        });
+        return;
+      }
+
+      if (!productData.productCategoryId) {
+        setErrorMessage("Vui lòng chọn danh mục sản phẩm");
+        setIsSubmitting(false);
+        toast.error("Vui lòng chọn danh mục sản phẩm", {
+          position: "top-right",
+          autoClose: 5000
+        });
+        return;
+      }
+
+      if (productData.productImageUrls.length === 0) {
+        setErrorMessage("Vui lòng tải lên ít nhất một hình ảnh sản phẩm");
+        setIsSubmitting(false);
+        toast.error("Vui lòng tải lên ít nhất một hình ảnh sản phẩm", {
+          position: "top-right",
+          autoClose: 5000
+        });
+        return;
+      }
+
+      // Kiểm tra productItems
+      if (productData.productItems.length === 0) {
+        setErrorMessage("Vui lòng thêm ít nhất một sản phẩm con");
+        setIsSubmitting(false);
+        toast.error("Vui lòng thêm ít nhất một sản phẩm con", {
+          position: "top-right",
+          autoClose: 5000
+        });
+        return;
+      }
 
       // Log the request for debugging
-      logApiRequest('PUT', `/api/products/${productId}`, updateProductData);
+      logApiRequest('PUT', `/api/products/${productId}`, productData);
 
       // Make API call to update the product
       try {
-        const response = await apiClient.put(
-          `/api/products/${productId}`,
-          JSON.stringify(updateProductData),
+        // Đảm bảo mỗi productItem có ít nhất một variationOptionId
+        const finalProductData = {
+          ...productData,
+          productItems: productData.productItems.map(item => {
+            // Nếu không có variationOptionIds hoặc rỗng, thử tìm một giá trị mặc định
+            if (!item.variationOptionIds || item.variationOptionIds.length === 0) {
+              // Tìm trong variations
+              let defaultOptionId = null;
+              if (productData.variations && productData.variations.length > 0) {
+                const firstVariation = productData.variations[0];
+                if (firstVariation.options && firstVariation.options.length > 0) {
+                  const selectedOption = firstVariation.options.find(opt => opt.isSelected);
+                  if (selectedOption) {
+                    defaultOptionId = selectedOption.id;
+                  } else {
+                    defaultOptionId = firstVariation.options[0].id;
+                  }
+                }
+              }
+
+              return {
+                ...item,
+                variationOptionIds: defaultOptionId ? [defaultOptionId] : []
+              };
+            }
+            return item;
+          })
+        };
+
+        // Kiểm tra lại một lần nữa
+        const stillHasEmptyOptions = finalProductData.productItems.some(
+          item => !item.variationOptionIds || item.variationOptionIds.length === 0
+        );
+
+        if (stillHasEmptyOptions) {
+          console.error("CRITICAL: Still have empty variationOptionIds after final processing");
+          setErrorMessage("Không thể tìm biến thể mặc định cho sản phẩm");
+          setIsSubmitting(false);
+          toast.error("Không thể tìm biến thể mặc định cho sản phẩm", {
+            position: "top-right",
+            autoClose: 5000
+          });
+          return;
+        }
+
+        console.log("Final request data:", finalProductData);
+
+        const response = await axios.put(
+          `${API_BASE_URL}/api/products/${productId}`,
+          finalProductData,
           {
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${JSON.parse(sessionStorage.getItem('authUser') || '{}').accessToken}`
             }
           }
         );
@@ -1315,7 +1591,7 @@ export default function EditProduct() {
               <button
                 className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
                 onClick={() => {
-                  localStorage.removeItem('authUser');
+                  sessionStorage.removeItem('authUser');
                   window.location.href = '/login';
                 }}
               >
@@ -1635,9 +1911,10 @@ export default function EditProduct() {
                                   value: v.id,
                                   label: v.name
                                 }))[0]}
-                              onChange={(option) =>
-                                updateVariation(index, 'id', option?.value || "")
-                              }
+                              onChange={(option) => {
+                                console.log("Selected variation type:", option);
+                                updateVariation(index, 'id', option?.value || "");
+                              }}
                             />
                           </div>
 
@@ -1670,7 +1947,18 @@ export default function EditProduct() {
                               }
                               onChange={(selectedOptions) => {
                                 const selectedIds = selectedOptions ? selectedOptions.map((option: any) => option.value) : [];
+                                console.log("Selected variation options:", selectedIds);
                                 updateVariation(index, 'variationOptionIds', selectedIds);
+
+                                // Cập nhật variationOptionIds cho tất cả product items
+                                if (selectedIds.length > 0) {
+                                  const updatedItems = productItems.map(item => ({
+                                    ...item,
+                                    variationOptionIds: selectedIds
+                                  }));
+                                  setProductItems(updatedItems);
+                                  console.log("Updated all product items with new variationOptionIds:", selectedIds);
+                                }
                               }}
                             />
                           </div>
@@ -1700,113 +1988,154 @@ export default function EditProduct() {
                     ) : (
                       <div className="space-y-4">
                         {productItems.map((item, index) => (
-                          <div key={item.id || `item-${index}`} className="mb-6 p-4 border rounded-lg bg-white">
-                            <div className="flex justify-between items-center mb-4">
-                              <h6 className="text-sm font-medium">Sản phẩm #{index + 1}</h6>
-                              <button
-                                type="button"
-                                onClick={() => removeProductItem(index)}
-                                className="text-red-500 hover:text-red-700"
-                              >
-                                <Trash2 className="size-4" />
-                              </button>
+                          <div key={index} className="p-4 mb-4 border rounded-lg bg-white shadow-sm">
+                            <div className="flex justify-between items-center mb-3">
+                              <h6 className="text-base font-medium">Sản phẩm #{index + 1}</h6>
+                              <div className="flex items-center">
+                                {/* Debug info - chỉ hiển thị trong development */}
+                                {process.env.NODE_ENV === 'development' && (
+                                  <div className="text-xs text-gray-500 mr-2">
+                                    {item.variationOptionIds && item.variationOptionIds.length > 0
+                                      ? `VariationOptionIds: ${item.variationOptionIds.join(', ')}`
+                                      : 'No variationOptionIds'}
+                                  </div>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => removeProductItem(index)}
+                                  className="text-red-500 hover:text-red-700"
+                                >
+                                  <Trash2 className="size-4" />
+                                </button>
+                              </div>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                              <div>
-                                <label className="inline-block mb-2 text-sm font-medium">
-                                  Giá thị trường (VND) <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                  type="text"
-                                  value={formatPriceDisplay(item.marketPrice?.toString() || '')}
-                                  onChange={e => {
-                                    const raw = e.target.value.replace(/\s/g, '');
-                                    if (/^\d*$/.test(raw)) {
-                                      const num = parseInt(raw) || 0;
-                                      if (num >= 0) {
-                                        updateProductItem(index, 'marketPrice', num);
+
+                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                              {/* Show only one field per variation option */}
+                              {item.variationOptionIds.map((optionId, optIndex) => {
+                                const variationInfo = availableVariations.find(v => v.variationOptions?.some(opt => opt.id === optionId));
+                                const option = variationInfo?.variationOptions?.find(opt => opt.id === optionId);
+                                return variationInfo && option ? (
+                                  <div key={optIndex}>
+                                    <label className="inline-block mb-2 text-sm font-medium">
+                                      {variationInfo.name} <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                      type="text"
+                                      className="form-input w-full bg-gray-100"
+                                      value={option.value || ""}
+                                      disabled
+                                    />
+                                  </div>
+                                ) : null;
+                              })}
+
+                              {/* Hiển thị cảnh báo nếu không có variationOptionIds */}
+                              {(!item.variationOptionIds || item.variationOptionIds.length === 0) && (
+                                <div className="col-span-2 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+                                  <strong className="font-bold">Cảnh báo!</strong>
+                                  <span className="block sm:inline"> Sản phẩm này chưa có biến thể. Vui lòng chọn biến thể ở phần trên.</span>
+                                </div>
+                              )}
+
+                              {/* Các trường số: giá bán, giá thị trường, giá nhập, số lượng */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className="inline-block mb-2 text-sm font-medium">
+                                    Giá thị trường (VND) <span className="text-red-500">*</span>
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={formatPriceDisplay(item.marketPrice?.toString() || '')}
+                                    onChange={e => {
+                                      const raw = e.target.value.replace(/\s/g, '');
+                                      if (/^\d*$/.test(raw)) {
+                                        const num = parseInt(raw) || 0;
+                                        if (num >= 0) {
+                                          updateProductItem(index, 'marketPrice', num);
+                                        }
                                       }
-                                    }
-                                  }}
-                                  placeholder="Nhập giá thị trường"
-                                  className={`form-input w-full ${productItemErrors[index]?.marketPrice ? 'border-red-500' : 'border-slate-200'}`}
-                                />
-                                {item.marketPrice < 0 && <p className="mt-1 text-sm text-red-500">Giá thị trường không được âm</p>}
-                                {productItemErrors[index]?.marketPrice && (
-                                  <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.marketPrice}</p>
-                                )}
-                              </div>
-                              <div>
-                                <label className="inline-block mb-2 text-sm font-medium">
-                                  Số lượng <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                  type="text"
-                                  value={item.quantityInStock?.toString() || ''}
-                                  onChange={e => {
-                                    const raw = e.target.value.replace(/\s/g, '');
-                                    if (/^\d*$/.test(raw)) {
-                                      const num = parseInt(raw) || 0;
-                                      if (num >= 0) {
-                                        updateProductItem(index, 'quantityInStock', num);
+                                    }}
+                                    placeholder="Nhập giá thị trường"
+                                    className={`form-input w-full ${productItemErrors[index]?.marketPrice ? 'border-red-500' : 'border-slate-200'}`}
+                                  />
+                                  {item.marketPrice < 0 && <p className="mt-1 text-sm text-red-500">Giá thị trường không được âm</p>}
+                                  {productItemErrors[index]?.marketPrice && (
+                                    <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.marketPrice}</p>
+                                  )}
+                                </div>
+                                <div>
+                                  <label className="inline-block mb-2 text-sm font-medium">
+                                    Số lượng <span className="text-red-500">*</span>
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={item.quantityInStock?.toString() || ''}
+                                    onChange={e => {
+                                      const raw = e.target.value.replace(/\s/g, '');
+                                      if (/^\d*$/.test(raw)) {
+                                        const num = parseInt(raw) || 0;
+                                        if (num >= 0) {
+                                          updateProductItem(index, 'quantityInStock', num);
+                                        }
                                       }
-                                    }
-                                  }}
-                                  placeholder="Nhập số lượng"
-                                  className={`form-input w-full ${productItemErrors[index]?.quantityInStock ? 'border-red-500' : 'border-slate-200'}`}
-                                />
-                                {item.quantityInStock < 0 && <p className="mt-1 text-sm text-red-500">Số lượng không được âm</p>}
-                                {productItemErrors[index]?.quantityInStock && (
-                                  <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.quantityInStock}</p>
-                                )}
-                              </div>
-                              <div>
-                                <label className="inline-block mb-2 text-sm font-medium">
-                                  Giá bán (VND) <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                  type="text"
-                                  value={formatPriceDisplay(item.price?.toString() || '')}
-                                  onChange={e => {
-                                    const raw = e.target.value.replace(/\s/g, '');
-                                    if (/^\d*$/.test(raw)) {
-                                      const num = parseInt(raw) || 0;
-                                      if (num >= 0) {
-                                        updateProductItem(index, 'price', num);
+                                    }}
+                                    placeholder="Nhập số lượng"
+                                    className={`form-input w-full ${productItemErrors[index]?.quantityInStock ? 'border-red-500' : 'border-slate-200'}`}
+                                  />
+                                  {item.quantityInStock < 0 && <p className="mt-1 text-sm text-red-500">Số lượng không được âm</p>}
+                                  {productItemErrors[index]?.quantityInStock && (
+                                    <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.quantityInStock}</p>
+                                  )}
+                                </div>
+                                <div>
+                                  <label className="inline-block mb-2 text-sm font-medium">
+                                    Giá bán (VND) <span className="text-red-500">*</span>
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={formatPriceDisplay(item.price?.toString() || '')}
+                                    onChange={e => {
+                                      const raw = e.target.value.replace(/\s/g, '');
+                                      if (/^\d*$/.test(raw)) {
+                                        const num = parseInt(raw) || 0;
+                                        if (num >= 0) {
+                                          updateProductItem(index, 'price', num);
+                                        }
                                       }
-                                    }
-                                  }}
-                                  placeholder="Nhập giá bán"
-                                  className={`form-input w-full ${productItemErrors[index]?.price ? 'border-red-500' : 'border-slate-200'}`}
-                                />
-                                {item.price < 0 && <p className="mt-1 text-sm text-red-500">Giá bán không được âm</p>}
-                                {productItemErrors[index]?.price && (
-                                  <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.price}</p>
-                                )}
-                              </div>
-                              <div>
-                                <label className="inline-block mb-2 text-sm font-medium">
-                                  Giá nhập (VND) <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                  type="text"
-                                  value={formatPriceDisplay(item.purchasePrice?.toString() || '')}
-                                  onChange={e => {
-                                    const raw = e.target.value.replace(/\s/g, '');
-                                    if (/^\d*$/.test(raw)) {
-                                      const num = parseInt(raw) || 0;
-                                      if (num >= 0) {
-                                        updateProductItem(index, 'purchasePrice', num);
+                                    }}
+                                    placeholder="Nhập giá bán"
+                                    className={`form-input w-full ${productItemErrors[index]?.price ? 'border-red-500' : 'border-slate-200'}`}
+                                  />
+                                  {item.price < 0 && <p className="mt-1 text-sm text-red-500">Giá bán không được âm</p>}
+                                  {productItemErrors[index]?.price && (
+                                    <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.price}</p>
+                                  )}
+                                </div>
+                                <div>
+                                  <label className="inline-block mb-2 text-sm font-medium">
+                                    Giá nhập (VND) <span className="text-red-500">*</span>
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={formatPriceDisplay(item.purchasePrice?.toString() || '')}
+                                    onChange={e => {
+                                      const raw = e.target.value.replace(/\s/g, '');
+                                      if (/^\d*$/.test(raw)) {
+                                        const num = parseInt(raw) || 0;
+                                        if (num >= 0) {
+                                          updateProductItem(index, 'purchasePrice', num);
+                                        }
                                       }
-                                    }
-                                  }}
-                                  placeholder="Nhập giá nhập"
-                                  className={`form-input w-full ${productItemErrors[index]?.purchasePrice ? 'border-red-500' : 'border-slate-200'}`}
-                                />
-                                {item.purchasePrice < 0 && <p className="mt-1 text-sm text-red-500">Giá nhập không được âm</p>}
-                                {productItemErrors[index]?.purchasePrice && (
-                                  <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.purchasePrice}</p>
-                                )}
+                                    }}
+                                    placeholder="Nhập giá nhập"
+                                    className={`form-input w-full ${productItemErrors[index]?.purchasePrice ? 'border-red-500' : 'border-slate-200'}`}
+                                  />
+                                  {item.purchasePrice < 0 && <p className="mt-1 text-sm text-red-500">Giá nhập không được âm</p>}
+                                  {productItemErrors[index]?.purchasePrice && (
+                                    <p className="mt-1 text-sm text-red-500">{productItemErrors[index]?.purchasePrice}</p>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             <div className="lg:col-span-3">
