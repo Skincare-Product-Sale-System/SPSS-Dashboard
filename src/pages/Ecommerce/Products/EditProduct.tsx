@@ -15,6 +15,44 @@ import { toast } from 'react-toastify';
 import { ToastContainer } from 'react-toastify';
 import { Link } from "react-router-dom";
 
+// Define base URL for API
+const API_BASE_URL = "https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net";
+
+// Configure axios defaults
+axios.defaults.headers.common['Content-Type'] = 'application/json';
+// Note: CORS headers need to be set on the server side, not the client side
+// axios.defaults.headers.common['Access-Control-Allow-Origin'] = '*';
+
+// Create axios instance with proxy configuration
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Add authorization interceptor
+apiClient.interceptors.request.use(
+  config => {
+    // Get the auth token from localStorage
+    const authUser = localStorage.getItem('authUser');
+    if (authUser) {
+      try {
+        const parsedAuth = JSON.parse(authUser);
+        if (parsedAuth && parsedAuth.token) {
+          config.headers['Authorization'] = `Bearer ${parsedAuth.token}`;
+        }
+      } catch (error) {
+        console.error('Error parsing auth token:', error);
+      }
+    }
+    return config;
+  },
+  error => {
+    return Promise.reject(error);
+  }
+);
+
 // Define interfaces
 interface ProductImage {
   file: File | null;
@@ -56,26 +94,35 @@ export default function EditProduct() {
   const navigate = useNavigate();
 
   // Get product ID from URL query parameter
-  const productId = new URLSearchParams(location.search).get('id');
+  const params = new URLSearchParams(location.search);
+  const productId = params.get('id');
 
-  // Create selector for product data
-  const productSelector = createSelector(
-    (state: any) => state.product,
-    (product) => ({
-      productData: product?.selectedProduct || null,
-      loading: product?.loading || false,
-      error: product?.error || null,
-    })
-  );
-
-  const { productData, loading } = useSelector(productSelector);
+  // State for product data
+  const [productData, setProductData] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<any>(null);
 
   // Fetch product data when component mounts
   useEffect(() => {
     if (productId) {
-      dispatch(getProductById(productId));
+      setLoading(true);
+      apiClient.get(`/api/products/${productId}/edit`)
+        .then(response => {
+          if (response.data && response.data.success && response.data.data) {
+            // Successfully got product data
+            setProductData(response.data.data);
+          } else {
+            setError("Failed to load product data: " + (response.data.message || "Unknown error"));
+          }
+        })
+        .catch(err => {
+          setError(err.message || "Failed to load product data");
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
-  }, [dispatch, productId]);
+  }, [productId]);
 
   // Handle form initialization separately
   useEffect(() => {
@@ -85,13 +132,13 @@ export default function EditProduct() {
         title: productData.name || '',
         description: productData.description || '',
         quantity: productData.soldCount?.toString() || '0',
-        brand: productData.brand?.id || '',
-        category: productData.category?.id || '',
+        brand: productData.brandId || '',
+        category: productData.productCategoryId || '',
         productType: productData.productType || '',
         gender: productData.gender || '',
         price: productData.price?.toString() || '',
         marketPrice: productData.marketPrice?.toString() || '',
-        skinType: productData.skinTypes?.map((type: any) => type.id) || [],
+        skinType: productData.skinTypeIds || [],
         variationOptions: [],
         detailedIngredients: productData.specifications?.detailedIngredients || '',
         mainFunction: productData.specifications?.mainFunction || '',
@@ -108,13 +155,7 @@ export default function EditProduct() {
       });
 
       // Set thumbnail if available
-      if (productData.thumbnail) {
-        setThumbnail({
-          preview: productData.thumbnail,
-          file: null,
-          formattedSize: "Existing image"
-        });
-      } else if (productData.productImageUrls && productData.productImageUrls.length > 0) {
+      if (productData.productImageUrls && productData.productImageUrls.length > 0) {
         setThumbnail({
           preview: productData.productImageUrls[0],
           file: null,
@@ -134,13 +175,19 @@ export default function EditProduct() {
 
       // Initialize variations from productData
       if (productData.variations && productData.variations.length > 0) {
-        console.log("Setting variations from product data:", productData.variations);
-        setVariations(productData.variations.map((variation: any) => ({
-          id: variation.id,
-          name: variation.name || '',
-          variationOptions: variation.variationOptions || [],
-          variationOptionIds: variation.variationOptionIds || []
-        })));
+        setVariations(productData.variations.map((variation: any) => {
+          // Find selected options
+          const selectedOptions = variation.options ?
+            variation.options.filter((option: any) => option.isSelected).map((option: any) => option.id) :
+            [];
+
+          return {
+            id: variation.id,
+            name: variation.name || '',
+            variationOptions: variation.options || [],
+            variationOptionIds: selectedOptions
+          };
+        }));
       } else {
         // If no variations, initialize with an empty one
         setVariations([{
@@ -151,9 +198,9 @@ export default function EditProduct() {
         }]);
       }
 
-      // Initialize product items from variationCombinations
-      if (productData.variationCombinations && productData.variationCombinations.length > 0) {
-        const items = productData.variationCombinations.map((item: any, index: number) => {
+      // Initialize product items from productItems
+      if (productData.productItems && productData.productItems.length > 0) {
+        const items = productData.productItems.map((item: any, index: number) => {
           // Create an entry in productItemImages for existing images
           if (item.imageUrl) {
             const itemKey = item.id || `temp-${index}`;
@@ -341,7 +388,7 @@ export default function EditProduct() {
   const fetchOptions = async () => {
     try {
       // Fetch brands
-      const brandsResponse = await axios.get("https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/brands?pageSize=100");
+      const brandsResponse = await axios.get(`${API_BASE_URL}/api/brands?pageSize=100`);
       if (brandsResponse.data && brandsResponse.data.items) {
         setBrandOptions(
           brandsResponse.data.items.map((item: any) => ({
@@ -352,7 +399,7 @@ export default function EditProduct() {
       }
 
       // Fetch skin types
-      const skinTypesResponse = await axios.get("https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/skin-types?pageSize=100");
+      const skinTypesResponse = await axios.get(`${API_BASE_URL}/api/skin-types?pageSize=100`);
       if (skinTypesResponse.data && skinTypesResponse.data.items) {
         setSkinTypeOptions(
           skinTypesResponse.data.items.map((item: any) => ({
@@ -363,7 +410,7 @@ export default function EditProduct() {
       }
 
       // Fetch categories - preserve hierarchy for nested categories
-      const categoriesResponse = await axios.get("https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/product-categories?pageSize=100");
+      const categoriesResponse = await axios.get(`${API_BASE_URL}/api/product-categories?pageSize=100`);
       if (categoriesResponse.data && categoriesResponse.data.items) {
         // Process categories to create a flat list with proper indentation for the dropdown
         const processedCategories = processCategoriesForDropdown(categoriesResponse.data.items);
@@ -371,16 +418,13 @@ export default function EditProduct() {
       }
 
       // Fetch variations
-      const variationsResponse = await axios.get("https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/variations?pageSize=100");
-      console.log("Variations response:", variationsResponse.data);
+      const variationsResponse = await axios.get(`${API_BASE_URL}/api/variations?pageSize=100`);
 
       let variationsData = [];
       if (variationsResponse.data && variationsResponse.data.success && variationsResponse.data.data && variationsResponse.data.data.items) {
         variationsData = variationsResponse.data.data.items;
       } else if (variationsResponse.data && variationsResponse.data.items) {
         variationsData = variationsResponse.data.items;
-      } else {
-        console.error("Unexpected variations response structure:", variationsResponse.data);
       }
 
       // If variations don't have options, we might need to fetch them separately
@@ -392,7 +436,7 @@ export default function EditProduct() {
 
         // Otherwise, try to fetch options separately (if your API supports this)
         try {
-          const optionsResponse = await axios.get(`https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/variations/${variation.id}?pageSize=100`);
+          const optionsResponse = await axios.get(`${API_BASE_URL}/api/variations/${variation.id}?pageSize=100`);
 
           if (optionsResponse.data && optionsResponse.data.variationOptions) {
             return {
@@ -411,7 +455,6 @@ export default function EditProduct() {
         };
       }));
 
-      console.log("Variations with options:", variationsWithOptions);
       setAvailableVariations(variationsWithOptions);
 
     } catch (error) {
@@ -543,8 +586,6 @@ export default function EditProduct() {
       const file = acceptedFiles[0];
       const formattedSize = formatBytes(file.size);
       const preview = URL.createObjectURL(file);
-
-      console.log("Image uploaded:", { file, preview, formattedSize });
 
       // Find the item ID or use a temporary ID
       const itemId = productItems[index]?.id || `temp-${index}`;
@@ -725,8 +766,7 @@ export default function EditProduct() {
         .required("Vui lòng nhập chức năng chính"),
       texture: Yup.string()
         .required("Vui lòng nhập kết cấu"),
-      englishName: Yup.string()
-        .required("Vui lòng nhập tên tiếng Anh"),
+      englishName: Yup.string(),
       keyActiveIngredients: Yup.string()
         .required("Vui lòng nhập thành phần hoạt chất chính"),
       storageInstruction: Yup.string().required("Vui lòng nhập hướng dẫn bảo quản"),
@@ -740,16 +780,12 @@ export default function EditProduct() {
     }),
     onSubmit: async (values: any) => {
       try {
-        console.log("Form submission started with values:", productFormik.values);
-        console.log("Product items:", productItems);
-
         // Validate all product items
         let hasProductItemErrors = false;
         const allProductItemErrors: { [key: number]: { [key: string]: string } } = {};
 
         if (productItems.length === 0) {
           setErrorMessage("At least one product item is required");
-          console.error("Validation failed: No product items");
           return;
         }
 
@@ -758,7 +794,6 @@ export default function EditProduct() {
           if (Object.keys(errors).length > 0) {
             hasProductItemErrors = true;
             allProductItemErrors[index] = errors;
-            console.error(`Validation errors for item #${index + 1}:`, errors);
           }
         });
 
@@ -771,200 +806,17 @@ export default function EditProduct() {
         setIsSubmitting(true);
         setErrorMessage("");
 
-        // Get Firebase backend instance
-        const firebaseBackend = getFirebaseBackend();
-        console.log("Firebase backend initialized");
-
-        // Upload thumbnail if exists
-        let thumbnailUrl = "";
-        if (thumbnail?.file) {
-          console.log("Uploading thumbnail...");
-          try {
-            thumbnailUrl = await firebaseBackend.uploadFileWithDirectory(thumbnail.file, "SPSS/Product-Thumbnail");
-            console.log("Thumbnail uploaded successfully:", thumbnailUrl);
-          } catch (uploadError) {
-            console.error("Error uploading thumbnail:", uploadError);
-            setErrorMessage("Failed to upload thumbnail. Please try again.");
-            setIsSubmitting(false);
-            return;
-          }
-        } else if (thumbnail?.preview) {
-          // Use existing preview if available
-          thumbnailUrl = thumbnail.preview;
-        }
-
-        // Upload product images if exist
-        let productImageUrls: string[] = [];
-        if (productImages.length > 0) {
-          console.log("Uploading product images...");
-          try {
-            const imageFiles = productImages.map(image => image.file).filter(Boolean);
-            const existingUrls = productImages
-              .filter(image => !image.file && image.preview)
-              .map(image => image.preview);
-
-            // Upload new files
-            if (imageFiles.length > 0) {
-              const uploadPromises = imageFiles.map(file =>
-                firebaseBackend.uploadFileWithDirectory(file, "SPSS/Product-Images")
-              );
-
-              // Wait for all uploads to complete
-              const uploadedUrls = await Promise.all(uploadPromises);
-              productImageUrls = [...existingUrls, ...uploadedUrls];
-            } else {
-              productImageUrls = existingUrls;
-            }
-
-            console.log("Product images processed successfully:", productImageUrls);
-          } catch (uploadError) {
-            console.error("Error uploading product images:", uploadError);
-            setErrorMessage("Failed to upload product images. Please try again.");
-            setIsSubmitting(false);
-            return;
-          }
-        }
-
-        // Combine all image URLs - ensure thumbnail is first if it exists
-        const allProductImageUrls = [];
-
-        // Add thumbnail if exists
-        if (thumbnailUrl) {
-          allProductImageUrls.push(thumbnailUrl);
-        }
-
-        // Add all product images
-        if (productImageUrls.length > 0) {
-          allProductImageUrls.push(...productImageUrls);
-        }
-
-        // Upload product item images and prepare variation combinations
-        const variationCombinations = await Promise.all(productItems.map(async (item, index) => {
-          let imageUrl = item.imageUrl || "";
-
-          // Get the item ID or use a temporary ID
-          const itemId = item.id || `temp-${index}`;
-
-          // If there's an image file for this item, upload it
-          if (productItemImages[itemId]?.file) {
-            try {
-              imageUrl = await firebaseBackend.uploadFileWithDirectory(
-                productItemImages[itemId]!.file,
-                "SPSS/Product-Item-Images"
-              );
-            } catch (uploadError) {
-              console.error(`Error uploading image for product item #${index + 1}:`, uploadError);
-              throw new Error(`Failed to upload image for product item #${index + 1}`);
-            }
-          }
-
-          return {
-            variationOptionIds: item.variationOptionIds || [],
-            imageUrl: imageUrl,
-            price: parseFloat(item.price.toString().replace(/\s/g, '')),
-            marketPrice: parseFloat(item.marketPrice.toString().replace(/\s/g, '')),
-            purchasePrice: parseFloat(item.purchasePrice.toString().replace(/\s/g, '')),
-            quantityInStock: parseInt(item.quantityInStock.toString())
-          };
-        }));
-
-        // Prepare variations data
-        const variationsData = variations.map(v => ({
-          id: v.id,
-          variationOptionIds: v.variationOptionIds || []
-        }));
-
-        // Get values from formik
-        const values = productFormik.values;
-
-        // Prepare data for API submission
-        const updateProductData = {
-          id: productId,
-          brandId: values.brand,
-          productCategoryId: values.category,
-          name: values.title,
-          description: values.description,
-          price: parseFloat(values.price.toString().replace(/\s/g, '')),
-          marketPrice: parseFloat(values.marketPrice.toString().replace(/\s/g, '')),
-          skinTypeIds: values.skinType,
-          productImageUrls: allProductImageUrls,
-          variations: variationsData,
-          variationCombinations: variationCombinations,
-          specifications: {
-            detailedIngredients: values.detailedIngredients,
-            mainFunction: values.mainFunction,
-            texture: values.texture,
-            englishName: values.englishName,
-            keyActiveIngredients: values.keyActiveIngredients,
-            storageInstruction: values.storageInstruction,
-            usageInstruction: values.usageInstruction,
-            expiryDate: values.expiryDate,
-            skinIssues: values.skinIssues
-          }
-        };
-
-        console.log("Prepared product data for submission:", updateProductData);
-
-        // Make API call to update the product
-        const response = await axios.patch(
-          `https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/products/${productId}`,
-          updateProductData,
-          {
-            headers: {
-              "Content-Type": "application/json"
-            }
-          }
-        );
-
-        console.log("API response:", response.data);
-
-        // Show success toast notification
-        toast.success("Sản phẩm đã được cập nhật thành công!", {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-        });
-
-        // Wait for toast to be visible before redirecting
-        setTimeout(() => {
-          navigate('/apps-ecommerce-product-list');
-        }, 2000);
-
+        // Call the handleUpdateProduct function to handle the update
+        await handleUpdateProduct();
       } catch (error: any) {
-        console.error("Error updating product:", error);
-        const errorMessage = error.response?.data?.message || error.message || "Không thể cập nhật sản phẩm. Vui lòng thử lại.";
-        setErrorMessage(errorMessage);
-
-        // Show error toast
-        toast.error(errorMessage, {
-          position: "top-right",
-          autoClose: 5000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-        });
-      } finally {
+        console.error("Error submitting form:", error);
+        setErrorMessage(error.message || "An error occurred while submitting the form");
         setIsSubmitting(false);
       }
     }
   });
 
-  // Add this function to debug form validation errors
-  const debugFormValidation = () => {
-    console.log("Form values:", productFormik.values);
-    console.log("Form errors:", productFormik.errors);
-    console.log("Form touched:", productFormik.touched);
-    console.log("Form isValid:", productFormik.isValid);
-    console.log("Form dirty:", productFormik.dirty);
-    console.log("Product items:", productItems);
-    console.log("Product item errors:", productItemErrors);
-  };
+
 
   // Update the form title and button text based on whether this is an edit or create
   const formTitle = productId ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm mới";
@@ -1044,17 +896,13 @@ export default function EditProduct() {
 
       // Get Firebase backend instance
       const firebaseBackend = getFirebaseBackend();
-      console.log("Firebase backend initialized");
 
       // Upload thumbnail if exists
       let thumbnailUrl = "";
       if (thumbnail?.file) {
-        console.log("Uploading thumbnail...");
         try {
           thumbnailUrl = await firebaseBackend.uploadFileWithDirectory(thumbnail.file, "SPSS/Product-Thumbnail");
-          console.log("Thumbnail uploaded successfully:", thumbnailUrl);
         } catch (uploadError) {
-          console.error("Error uploading thumbnail:", uploadError);
           setErrorMessage("Failed to upload thumbnail. Please try again.");
           setIsSubmitting(false);
           return;
@@ -1067,7 +915,6 @@ export default function EditProduct() {
       // Upload product images if exist
       let productImageUrls: string[] = [];
       if (productImages.length > 0) {
-        console.log("Uploading product images...");
         try {
           const imageFiles = productImages.map(image => image.file).filter(Boolean);
           const existingUrls = productImages
@@ -1086,10 +933,7 @@ export default function EditProduct() {
           } else {
             productImageUrls = existingUrls;
           }
-
-          console.log("Product images processed successfully:", productImageUrls);
         } catch (uploadError) {
-          console.error("Error uploading product images:", uploadError);
           setErrorMessage("Failed to upload product images. Please try again.");
           setIsSubmitting(false);
           return;
@@ -1109,27 +953,27 @@ export default function EditProduct() {
         allProductImageUrls.push(...productImageUrls);
       }
 
-      // Upload product item images and prepare variation combinations
-      const variationCombinations = await Promise.all(productItems.map(async (item, index) => {
+      // Upload product item images and prepare product items
+      const processedProductItems = await Promise.all(productItems.map(async (item, index) => {
         let imageUrl = item.imageUrl || "";
 
         // Get the item ID or use a temporary ID
-        const itemId = item.id || `temp-${index}`;
+        const itemKey = item.id || `temp-${index}`;
 
         // If there's an image file for this item, upload it
-        if (productItemImages[itemId]?.file) {
+        if (productItemImages[itemKey]?.file) {
           try {
             imageUrl = await firebaseBackend.uploadFileWithDirectory(
-              productItemImages[itemId]!.file,
+              productItemImages[itemKey]!.file,
               "SPSS/Product-Item-Images"
             );
           } catch (uploadError) {
-            console.error(`Error uploading image for product item #${index + 1}:`, uploadError);
             throw new Error(`Failed to upload image for product item #${index + 1}`);
           }
         }
 
         return {
+          id: item.id || undefined, // Only include ID if it exists
           variationOptionIds: item.variationOptionIds || [],
           imageUrl: imageUrl,
           price: parseFloat(item.price.toString().replace(/\s/g, '')),
@@ -1139,11 +983,24 @@ export default function EditProduct() {
         };
       }));
 
-      // Prepare variations data
-      const variationsData = variations.map(v => ({
-        id: v.id,
-        variationOptionIds: v.variationOptionIds || []
-      }));
+      // Prepare variations data with selected options
+      const variationsData = variations.map(v => {
+        // Get all available options for this variation
+        const allOptions = availableVariations.find(av => av.id === v.id)?.variationOptions || [];
+
+        // Map options with isSelected flag
+        const options = allOptions.map(opt => ({
+          id: opt.id,
+          value: opt.value,
+          isSelected: v.variationOptionIds.includes(opt.id)
+        }));
+
+        return {
+          id: v.id,
+          name: availableVariations.find(av => av.id === v.id)?.name || '',
+          options: options
+        };
+      });
 
       // Get values from formik
       const values = productFormik.values;
@@ -1151,21 +1008,22 @@ export default function EditProduct() {
       // Prepare data for API submission
       const updateProductData = {
         id: productId,
-        brandId: values.brand,
-        productCategoryId: values.category,
         name: values.title,
         description: values.description,
         price: parseFloat(values.price.toString().replace(/\s/g, '')),
         marketPrice: parseFloat(values.marketPrice.toString().replace(/\s/g, '')),
-        skinTypeIds: values.skinType,
+        status: values.status,
+        brandId: values.brand,
+        productCategoryId: values.category,
         productImageUrls: allProductImageUrls,
+        skinTypeIds: values.skinType,
         variations: variationsData,
-        variationCombinations: variationCombinations,
+        productItems: processedProductItems,
         specifications: {
           detailedIngredients: values.detailedIngredients,
           mainFunction: values.mainFunction,
           texture: values.texture,
-          englishName: values.englishName,
+          englishName: values.englishName || null,
           keyActiveIngredients: values.keyActiveIngredients,
           storageInstruction: values.storageInstruction,
           usageInstruction: values.usageInstruction,
@@ -1174,44 +1032,86 @@ export default function EditProduct() {
         }
       };
 
-      console.log("Prepared product data for submission:", updateProductData);
-
       // Make API call to update the product
-      const response = await axios.patch(
-        `https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net/api/products/${productId}`,
-        updateProductData,
-        {
-          headers: {
-            "Content-Type": "application/json"
-          }
+      try {
+        await apiClient.put(
+          `/api/products/${productId}`,
+          updateProductData
+        );
+
+        // Show success toast notification
+        toast.success("Sản phẩm đã được cập nhật thành công!", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
+
+        // Wait for toast to be visible before redirecting
+        setTimeout(() => {
+          navigate('/apps-ecommerce-product-list');
+        }, 2000);
+      } catch (error: any) {
+        // Log detailed error information
+        if (error.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+
+          const errorMessage = error.response.data?.message ||
+            error.response.data?.errors?.join(", ") ||
+            "Không thể cập nhật sản phẩm. Vui lòng thử lại.";
+          setErrorMessage(errorMessage);
+
+          // Show error toast
+          toast.error(errorMessage, {
+            position: "top-right",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+        } else if (error.request) {
+          // The request was made but no response was received
+          const noResponseMsg = "Không nhận được phản hồi từ máy chủ. Vui lòng kiểm tra kết nối mạng.";
+          setErrorMessage(noResponseMsg);
+
+          // Show error toast
+          toast.error(noResponseMsg, {
+            position: "top-right",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          const setupErrorMsg = error.message || "Lỗi không xác định khi cập nhật sản phẩm.";
+          setErrorMessage(setupErrorMsg);
+
+          // Show error toast
+          toast.error(setupErrorMsg, {
+            position: "top-right",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
         }
-      );
-
-      console.log("API response:", response.data);
-
-      // Show success toast notification
-      toast.success("Sản phẩm đã được cập nhật thành công!", {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-      });
-
-      // Wait for toast to be visible before redirecting
-      setTimeout(() => {
-        navigate('/apps-ecommerce-product-list');
-      }, 2000);
-
+      }
     } catch (error: any) {
-      console.error("Error updating product:", error);
-      const errorMessage = error.response?.data?.message || error.message || "Không thể cập nhật sản phẩm. Vui lòng thử lại.";
-      setErrorMessage(errorMessage);
+      setErrorMessage(error.message || "Đã xảy ra lỗi khi xử lý yêu cầu");
 
       // Show error toast
-      toast.error(errorMessage, {
+      toast.error(error.message || "Đã xảy ra lỗi khi xử lý yêu cầu", {
         position: "top-right",
         autoClose: 5000,
         hideProgressBar: false,
@@ -1227,19 +1127,10 @@ export default function EditProduct() {
 
   // Replace window.location.href with navigate
   const handleBackToList = () => {
-    // First, check if we need to save any state to localStorage
     try {
-      // Save any necessary auth state to localStorage if needed
-      const authToken = localStorage.getItem('authUser');
-      if (authToken) {
-        // Ensure token is still valid in localStorage before navigation
-        console.log("Auth token exists, proceeding with navigation");
-      }
-
       // Use navigate with replace option to avoid history stack issues
       navigate('/apps-ecommerce-product-list', { replace: true });
     } catch (error) {
-      console.error("Navigation error:", error);
       // Fallback to direct navigation if there's an error
       navigate('/apps-ecommerce-product-list');
     }
@@ -1264,6 +1155,8 @@ export default function EditProduct() {
     }, 2000);
   };
 
+
+
   return (
     <React.Fragment>
       <ToastContainer
@@ -1283,6 +1176,20 @@ export default function EditProduct() {
         <div className="flex items-center justify-center h-60">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
+      ) : error ? (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+          <strong className="font-bold">Lỗi!</strong>
+          <span className="block sm:inline"> {error}</span>
+          <p className="mt-2">Vui lòng kiểm tra kết nối API tại: {API_BASE_URL}</p>
+          <div className="flex gap-2 mt-3">
+            <button
+              className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+              onClick={() => window.location.reload()}
+            >
+              Tải lại trang
+            </button>
+          </div>
+        </div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-x-5">
           <div className="xl:col-span-12">
@@ -1299,7 +1206,6 @@ export default function EditProduct() {
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
-                    console.log("Form submitted");
                     handleUpdateProduct();
                   }}
                   className="space-y-6"
@@ -2026,10 +1932,7 @@ export default function EditProduct() {
 
                     <button
                       type="button"
-                      onClick={() => {
-                        console.log("Update button clicked");
-                        handleUpdateProduct();
-                      }}
+                      onClick={() => handleUpdateProduct()}
                       disabled={isSubmitting}
                       className={`text-white btn ${isSubmitting
                         ? 'bg-gray-400 cursor-not-allowed'

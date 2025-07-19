@@ -1,6 +1,6 @@
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
-module.exports = function(app) {
+module.exports = function (app) {
   app.use(
     '/api',
     createProxyMiddleware({
@@ -8,10 +8,10 @@ module.exports = function(app) {
       changeOrigin: true,
       secure: true,
       logLevel: 'debug',
-      onProxyReq: function(proxyReq, req, res) {
+      onProxyReq: function (proxyReq, req, res) {
         console.log('Proxying request:', req.method, req.url);
       },
-      onError: function(err, req, res) {
+      onError: function (err, req, res) {
         console.error('Proxy error:', err);
       }
     })
