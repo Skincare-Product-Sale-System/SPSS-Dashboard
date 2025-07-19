@@ -165,11 +165,11 @@ const OrderOverview = () => {
   // Add this function to get cancel reason text
   const getCancelReasonText = (reasonId: string) => {
     // You would replace this with your actual mapping of reason IDs to text
-    const cancelReasons: {[key: string]: string} = {
+    const cancelReasons: { [key: string]: string } = {
       "8f1f6496-4f75-48b9-ab9d-22066c681ebb": "Khách hàng yêu cầu hủy",
       // Add more reason mappings as needed
     };
-    
+
     return cancelReasons[reasonId] || "Lý do khác";
   };
 
@@ -263,8 +263,8 @@ const OrderOverview = () => {
                     <h1 style="font-size: 24px; color: #333; margin: 0 0 5px 0;">Hóa Đơn</h1>
                     <h2 style="font-size: 18px; color: #555; margin: 0 0 5px 0;">Mã Hóa Đơn: ${invoiceNumber}</h2>
                     <p style="margin: 0; color: #555;">Ngày: ${formatDate(
-                      currentOrder.createdTime
-                    )}</p>
+      currentOrder.createdTime
+    )}</p>
                 </div>
                 
                 <!-- Company and Customer Info -->
@@ -285,32 +285,26 @@ const OrderOverview = () => {
                     <div style="width: 45%;">
                         <div style="border: 1px solid #eee; border-radius: 5px; padding: 15px;">
                             <h3 style="margin: 0 0 10px 0; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 5px;">Thông Tin Thanh Toán</h3>
-                            <p style="margin: 5px 0;"><strong>${
-                              currentOrder.address?.customerName || "N/A"
-                            }</strong></p>
-                            <p style="margin: 5px 0;">${
-                              currentOrder.address?.addressLine1 || "N/A"
-                            }</p>
-                            ${
-                              currentOrder.address?.addressLine2
-                                ? `<p style="margin: 5px 0;">${currentOrder.address.addressLine2}</p>`
-                                : ""
-                            }
+                            <p style="margin: 5px 0;"><strong>${currentOrder.address?.customerName || "N/A"
+      }</strong></p>
+                            <p style="margin: 5px 0;">${currentOrder.address?.streetNumber ? `${currentOrder.address.streetNumber}, ` : ""}${currentOrder.address?.addressLine1 || "N/A"
+      }</p>
+                            ${currentOrder.address?.addressLine2 && currentOrder.address.addressLine2.trim() !== ""
+        ? `<p style="margin: 5px 0;">${currentOrder.address.addressLine2}</p>`
+        : ""
+      }
                             <p style="margin: 5px 0;">
-                                ${currentOrder.address?.city || ""} ${
-      currentOrder.address?.province ? `, ${currentOrder.address.province}` : ""
-    }
+                                ${currentOrder.address?.ward ? `${currentOrder.address.ward}, ` : ""}${currentOrder.address?.city || ""} ${currentOrder.address?.province ? `, ${currentOrder.address.province}` : ""
+      }
                             </p>
-                            <p style="margin: 5px 0;">${
-                              currentOrder.address?.countryName || ""
-                            }</p>
-                            ${
-                              currentOrder.address?.phoneNumber
-                                ? `<p style="margin: 5px 0;">SĐT: ${formatPhoneNumber(
-                                    currentOrder.address.phoneNumber
-                                  )}</p>`
-                                : ""
-                            }
+                            <p style="margin: 5px 0;">${currentOrder.address?.countryName || ""
+      }</p>
+                            ${currentOrder.address?.phoneNumber
+        ? `<p style="margin: 5px 0;">SĐT: ${formatPhoneNumber(
+          currentOrder.address.phoneNumber
+        )}</p>`
+        : ""
+      }
                         </div>
                     </div>
                 </div>
@@ -321,14 +315,14 @@ const OrderOverview = () => {
                     <div style="display: flex; flex-wrap: wrap;">
                         <div style="width: 50%; margin-bottom: 5px;">
                             <span style="font-weight: bold;">Mã đơn hàng:</span> ${currentOrder.id.substring(
-                              0,
-                              8
-                            )}
+        0,
+        8
+      )}
                         </div>
                         <div style="width: 50%; margin-bottom: 5px;">
                             <span style="font-weight: bold;">Ngày đặt hàng:</span> ${formatDate(
-                              currentOrder.createdTime
-                            )}
+        currentOrder.createdTime
+      )}
                         </div>
                         <div style="width: 50%; margin-bottom: 5px;">
                             <span style="font-weight: bold;">Ngày giao dự kiến:</span> ${estimatedDeliveryDate}
@@ -362,55 +356,50 @@ const OrderOverview = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            ${
-                              currentOrder.orderDetails &&
-                              currentOrder.orderDetails
-                                .map(
-                                  (item: any, index: number) => {
-                                    // Ensure price and quantity are valid numbers
-                                    const price = item.price || 0;
-                                    const quantity = item.quantity || 0;
-                                    const total = price * quantity;
-                                    
-                                    return `
+                            ${currentOrder.orderDetails &&
+      currentOrder.orderDetails
+        .map(
+          (item: any, index: number) => {
+            // Ensure price and quantity are valid numbers
+            const price = item.price || 0;
+            const quantity = item.quantity || 0;
+            const total = price * quantity;
+
+            return `
                                 <tr>
                                     <td style="padding: 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px;">
                                         <div style="display: flex; align-items: center;">
                                             <div style="margin-right: 10px;">
-                                                <img src="${
-                                                  item.productImage || ""
-                                                }" alt="" style="width: 40px; height: 40px; object-fit: contain; background-color: #f9f9f9; border-radius: 4px;">
+                                                <img src="${item.productImage || ""
+              }" alt="" style="width: 40px; height: 40px; object-fit: contain; background-color: #f9f9f9; border-radius: 4px;">
                                             </div>
                                             <div>
-                                                <p style="margin: 0; font-weight: 500;">${
-                                                  item.productName || "Sản phẩm"
-                                                }</p>
+                                                <p style="margin: 0; font-weight: 500;">${item.productName || "Sản phẩm"
+              }</p>
                                                 <p style="margin: 3px 0 0 0; color: #777; font-size: 12px;">
-                                                    ${
-                                                      item.variationOptionValues &&
-                                                      item.variationOptionValues.length > 0 
-                                                        ? item.variationOptionValues.join(", ")
-                                                        : ""
-                                                    }
+                                                    ${item.variationOptionValues &&
+                item.variationOptionValues.length > 0
+                ? item.variationOptionValues.join(", ")
+                : ""
+              }
                                                 </p>
                                             </div>
                                         </div>
                                     </td>
                                     <td style="padding: 10px; text-align: right; border-bottom: 1px solid #eee; font-size: 14px;">${formatCurrency(
-                                      price
-                                    )}</td>
-                                    <td style="padding: 10px; text-align: center; border-bottom: 1px solid #eee; font-size: 14px;">${
-                                      quantity
-                                    }</td>
+                price
+              )}</td>
+                                    <td style="padding: 10px; text-align: center; border-bottom: 1px solid #eee; font-size: 14px;">${quantity
+              }</td>
                                     <td style="padding: 10px; text-align: right; border-bottom: 1px solid #eee; font-size: 14px; font-weight: 500;">${formatCurrency(
-                                      total
-                                    )}</td>
+                total
+              )}</td>
                                 </tr>
                             `;
-                                  }
-                                )
-                                .join("")
-                            }
+          }
+        )
+        .join("")
+      }
                         </tbody>
                     </table>
                 </div>
@@ -422,32 +411,32 @@ const OrderOverview = () => {
                             <tr>
                                 <td style="padding: 8px 0; text-align: left; font-size: 14px;">Tổng phụ:</td>
                                 <td style="padding: 8px 0; text-align: right; font-size: 14px;">${formatCurrency(
-                                  originalOrderTotal
-                                )}</td>
+        originalOrderTotal
+      )}</td>
                             </tr>
                             <tr>
                                 <td style="padding: 8px 0; text-align: left; font-size: 14px;">Giảm giá:</td>
                                 <td style="padding: 8px 0; text-align: right; font-size: 14px;">${formatCurrency(
-                                  discountAmount
-                                )}</td>
+        discountAmount
+      )}</td>
                             </tr>
                             <tr>
                                 <td style="padding: 8px 0; text-align: left; font-size: 14px;">Phí vận chuyển:</td>
                                 <td style="padding: 8px 0; text-align: right; font-size: 14px;">${formatCurrency(
-                                  0
-                                )}</td>
+        0
+      )}</td>
                             </tr>
                             <tr>
                                 <td style="padding: 8px 0; text-align: left; font-size: 14px;">Thuế:</td>
                                 <td style="padding: 8px 0; text-align: right; font-size: 14px;">${formatCurrency(
-                                  0
-                                )}</td>
+        0
+      )}</td>
                             </tr>
                             <tr style="font-weight: bold; border-top: 2px solid #eee;">
                                 <td style="padding: 8px 0; text-align: left; font-size: 16px;">Tổng cộng:</td>
                                 <td style="padding: 8px 0; text-align: right; font-size: 16px;">${formatCurrency(
-                                  discountedOrderTotal
-                                )}</td>
+        discountedOrderTotal
+      )}</td>
                             </tr>
                         </table>
                     </div>
@@ -807,9 +796,8 @@ const OrderOverview = () => {
 
       {/* Invoice template for printing - make it visible but hidden until print */}
       <div
-        className={`fixed top-0 left-0 w-full h-full bg-white ${
-          showInvoice ? "block z-50" : "hidden -z-10"
-        }`}
+        className={`fixed top-0 left-0 w-full h-full bg-white ${showInvoice ? "block z-50" : "hidden -z-10"
+          }`}
       >
         <div ref={invoiceRef} className="p-8 bg-white print-only">
           {/* The invoice template will be inserted here dynamically */}
@@ -829,16 +817,20 @@ const OrderOverview = () => {
                 {currentOrder.address?.customerName || "N/A"}
               </h6>
               <p className="mb-1 text-slate-500 dark:text-zink-200">
+                {currentOrder.address?.streetNumber ? `${currentOrder.address.streetNumber}, ` : ""}
                 {currentOrder.address?.addressLine1 || "N/A"}
-                {currentOrder.address?.addressLine2
-                  ? `, ${currentOrder.address.addressLine2}`
-                  : ""}
               </p>
+              {currentOrder.address?.addressLine2 && currentOrder.address.addressLine2.trim() !== "" && (
+                <p className="mb-1 text-slate-500 dark:text-zink-200">
+                  {currentOrder.address.addressLine2}
+                </p>
+              )}
+              {currentOrder.address?.ward && (
+                <p className="mb-1 text-slate-500 dark:text-zink-200">
+                  {currentOrder.address.ward}, {currentOrder.address?.city || ""}, {currentOrder.address?.province || ""}
+                </p>
+              )}
               <p className="text-slate-500 dark:text-zink-200">
-                {currentOrder.address?.city || ""}
-                {currentOrder.address?.city ? ", " : ""}
-                {currentOrder.address?.province || ""}
-                {currentOrder.address?.province ? ", " : ""}
                 {currentOrder.address?.countryName || ""}
               </p>
 
@@ -852,7 +844,7 @@ const OrderOverview = () => {
               )}
             </div>
           </div>
-          
+
           {/* Update Billing Details Card */}
           <div className="card mt-5">
             <div className="card-body">
@@ -870,7 +862,7 @@ const OrderOverview = () => {
                     {currentOrder.address?.customerName || "N/A"}
                   </p>
                 </div>
-                
+
                 <div>
                   <h6 className="mb-1 text-sm font-medium text-slate-700 dark:text-zink-200">
                     Phương thức thanh toán
@@ -892,27 +884,31 @@ const OrderOverview = () => {
                     )}
                   </div>
                 </div>
-                
+
                 <div>
                   <h6 className="mb-1 text-sm font-medium text-slate-700 dark:text-zink-200">
                     Địa chỉ thanh toán
                   </h6>
                   <p className="text-slate-500 dark:text-zink-200">
+                    {currentOrder.address?.streetNumber ? `${currentOrder.address.streetNumber}, ` : ""}
                     {currentOrder.address?.addressLine1 || "N/A"}
-                    {currentOrder.address?.addressLine2
-                      ? `, ${currentOrder.address.addressLine2}`
-                      : ""}
-                    <br />
-                    {currentOrder.address?.ward && `${currentOrder.address.ward}, `}
-                    {currentOrder.address?.city || ""}
-                    {currentOrder.address?.city ? ", " : ""}
-                    {currentOrder.address?.province || ""}
-                    {currentOrder.address?.province ? ", " : ""}
+                  </p>
+                  {currentOrder.address?.addressLine2 && currentOrder.address.addressLine2.trim() !== "" && (
+                    <p className="text-slate-500 dark:text-zink-200">
+                      {currentOrder.address.addressLine2}
+                    </p>
+                  )}
+                  {currentOrder.address?.ward && (
+                    <p className="text-slate-500 dark:text-zink-200">
+                      {currentOrder.address.ward}, {currentOrder.address?.city || ""}, {currentOrder.address?.province || ""}
+                    </p>
+                  )}
+                  <p className="text-slate-500 dark:text-zink-200">
                     {currentOrder.address?.countryName || ""}
                   </p>
                 </div>
-                
-                <div>
+
+                {/* <div>
                   <h6 className="mb-1 text-sm font-medium text-slate-700 dark:text-zink-200">
                     Trạng thái thanh toán
                   </h6>
@@ -928,8 +924,8 @@ const OrderOverview = () => {
                         ? "Đã hủy"
                         : "Chưa thanh toán"}
                   </span>
-                </div>
-                
+                </div> */}
+
                 <div>
                   <h6 className="mb-1 text-sm font-medium text-slate-700 dark:text-zink-200">
                     Tổng thanh toán
@@ -950,7 +946,7 @@ const OrderOverview = () => {
                     )}
                   </div>
                 </div>
-                
+
                 {/* Add voucher information if available */}
                 {currentOrder.voucherCode && (
                   <div>
@@ -967,7 +963,7 @@ const OrderOverview = () => {
                     </div>
                   </div>
                 )}
-                
+
                 {/* Add discount information if available */}
                 {currentOrder.discountAmount > 0 && (
                   <div>
@@ -986,52 +982,52 @@ const OrderOverview = () => {
                     </div>
                   </div>
                 )}
-                
+
                 {/* Payment Date Information */}
-                {(currentOrder.paymentStatus === "Paid" || 
-                  (currentOrder.paymentMethodId !== "COD" && 
-                   currentOrder.status !== "Awaiting Payment" && 
-                   currentOrder.status !== "Cancelled")) && (
-                  <div>
-                    <h6 className="mb-1 text-sm font-medium text-slate-700 dark:text-zink-200">
-                      Ngày thanh toán
-                    </h6>
-                    <p className="text-slate-500 dark:text-zink-200">
-                      {currentOrder.paymentDate 
-                        ? formatDate(currentOrder.paymentDate) 
-                        : currentOrder.paymentMethodId !== "COD" 
-                          ? formatDate(currentOrder.createdTime) 
-                          : formatDate(currentOrder.updatedTime || currentOrder.createdTime)}
-                    </p>
-                  </div>
-                )}
-                
-                {currentOrder.paymentMethodId === "COD" && 
-                 currentOrder.status !== "Cancelled" && 
-                 currentOrder.status !== "Delivered" && (
-                  <div>
-                    <h6 className="mb-1 text-sm font-medium text-slate-700 dark:text-zink-200">
-                      Dự kiến thanh toán
-                    </h6>
-                    <p className="text-slate-500 dark:text-zink-200">
-                      Khi nhận hàng ({moment(currentOrder.createdTime).add(3, "days").format("DD/MM/YYYY")} - {moment(currentOrder.createdTime).add(5, "days").format("DD/MM/YYYY")})
-                    </p>
-                  </div>
-                )}
-                
+                {(currentOrder.paymentStatus === "Paid" ||
+                  (currentOrder.paymentMethodId !== "COD" &&
+                    currentOrder.status !== "Awaiting Payment" &&
+                    currentOrder.status !== "Cancelled")) && (
+                    <div>
+                      <h6 className="mb-1 text-sm font-medium text-slate-700 dark:text-zink-200">
+                        Ngày thanh toán
+                      </h6>
+                      <p className="text-slate-500 dark:text-zink-200">
+                        {currentOrder.paymentDate
+                          ? formatDate(currentOrder.paymentDate)
+                          : currentOrder.paymentMethodId !== "COD"
+                            ? formatDate(currentOrder.createdTime)
+                            : formatDate(currentOrder.updatedTime || currentOrder.createdTime)}
+                      </p>
+                    </div>
+                  )}
+
+                {currentOrder.paymentMethodId === "COD" &&
+                  currentOrder.status !== "Cancelled" &&
+                  currentOrder.status !== "Delivered" && (
+                    <div>
+                      <h6 className="mb-1 text-sm font-medium text-slate-700 dark:text-zink-200">
+                        Dự kiến thanh toán
+                      </h6>
+                      <p className="text-slate-500 dark:text-zink-200">
+                        Khi nhận hàng ({moment(currentOrder.createdTime).add(3, "days").format("DD/MM/YYYY")} - {moment(currentOrder.createdTime).add(5, "days").format("DD/MM/YYYY")})
+                      </p>
+                    </div>
+                  )}
+
                 {currentOrder.status === "Cancelled" && (
                   <div>
                     <h6 className="mb-1 text-sm font-medium text-slate-700 dark:text-zink-200">
                       Ngày hủy thanh toán
                     </h6>
                     <p className="text-slate-500 dark:text-zink-200">
-                      {currentOrder.statusChanges && currentOrder.statusChanges.find((change: {status: string, date: string}) => change.status === "Cancelled")
-                        ? formatDate(currentOrder.statusChanges.find((change: {status: string, date: string}) => change.status === "Cancelled")?.date)
+                      {currentOrder.statusChanges && currentOrder.statusChanges.find((change: { status: string, date: string }) => change.status === "Cancelled")
+                        ? formatDate(currentOrder.statusChanges.find((change: { status: string, date: string }) => change.status === "Cancelled")?.date)
                         : formatDate(currentOrder.updatedTime || currentOrder.createdTime)}
                     </p>
                   </div>
                 )}
-                
+
                 {currentOrder.cancelReasonId && (
                   <div>
                     <h6 className="mb-1 text-sm font-medium text-slate-700 dark:text-zink-200">
@@ -1045,7 +1041,7 @@ const OrderOverview = () => {
               </div>
             </div>
           </div>
-          
+
           {/* Order Timeline Card */}
           <div className="card mt-5">
             <div className="card-body">
@@ -1223,81 +1219,78 @@ const OrderOverview = () => {
                   currentOrder.status === "Pending" ||
                   currentOrder.status === "Shipping" ||
                   currentOrder.status === "Delivered") && (
-                  <div
-                    className={`relative ltr:pl-6 rtl:pr-6 before:absolute ltr:before:border-l rtl:before:border-r ltr:before:left-[0.1875rem] rtl:before:right-[0.1875rem] before:border-slate-200 before:top-1.5 before:-bottom-1.5 after:absolute after:size-2 after:bg-white after:border after:border-slate-200 after:rounded-full ltr:after:left-0 rtl:after:right-0 after:top-1.5 pb-4 last:before:hidden ${
-                      currentOrder.status === "Awaiting Payment"
+                    <div
+                      className={`relative ltr:pl-6 rtl:pr-6 before:absolute ltr:before:border-l rtl:before:border-r ltr:before:left-[0.1875rem] rtl:before:right-[0.1875rem] before:border-slate-200 before:top-1.5 before:-bottom-1.5 after:absolute after:size-2 after:bg-white after:border after:border-slate-200 after:rounded-full ltr:after:left-0 rtl:after:right-0 after:top-1.5 pb-4 last:before:hidden ${currentOrder.status === "Awaiting Payment"
                         ? "active"
                         : "done"
-                    }`}
-                  >
-                    <div className="flex gap-4">
-                      <div className="grow">
-                        <h6 className="mb-2 text-sky-500 text-15 dark:text-sky-400">
-                          Chờ thanh toán
-                        </h6>
-                        <p className="text-gray-400 dark:text-zink-200">
-                          Chờ xác nhận thanh toán.
+                        }`}
+                    >
+                      <div className="flex gap-4">
+                        <div className="grow">
+                          <h6 className="mb-2 text-sky-500 text-15 dark:text-sky-400">
+                            Chờ thanh toán
+                          </h6>
+                          <p className="text-gray-400 dark:text-zink-200">
+                            Chờ xác nhận thanh toán.
+                          </p>
+                        </div>
+                        <p className="text-sm text-gray-400 dark:text-zink-200 shrink-0">
+                          {moment(currentOrder.createdTime)
+                            .add(1, "days")
+                            .format("DD MMM, YYYY")}
                         </p>
                       </div>
-                      <p className="text-sm text-gray-400 dark:text-zink-200 shrink-0">
-                        {moment(currentOrder.createdTime)
-                          .add(1, "days")
-                          .format("DD MMM, YYYY")}
-                      </p>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {(currentOrder.status === "Pending" ||
                   currentOrder.status === "Shipping" ||
                   currentOrder.status === "Delivered") && (
-                  <div
-                    className={`relative ltr:pl-6 rtl:pr-6 before:absolute ltr:before:border-l rtl:before:border-r ltr:before:left-[0.1875rem] rtl:before:right-[0.1875rem] before:border-slate-200 before:top-1.5 before:-bottom-1.5 after:absolute after:size-2 after:bg-white after:border after:border-slate-200 after:rounded-full ltr:after:left-0 rtl:after:right-0 after:top-1.5 pb-4 last:before:hidden ${
-                      currentOrder.status === "Pending" ? "active" : "done"
-                    }`}
-                  >
-                    <div className="flex gap-4">
-                      <div className="grow">
-                        <h6 className="mb-2 text-yellow-500 text-15 dark:text-yellow-400">
-                          Đang xử lý
-                        </h6>
-                        <p className="text-gray-400 dark:text-zink-200">
-                          Đơn hàng đang được xử lý và chuẩn bị giao hàng.
+                    <div
+                      className={`relative ltr:pl-6 rtl:pr-6 before:absolute ltr:before:border-l rtl:before:border-r ltr:before:left-[0.1875rem] rtl:before:right-[0.1875rem] before:border-slate-200 before:top-1.5 before:-bottom-1.5 after:absolute after:size-2 after:bg-white after:border after:border-slate-200 after:rounded-full ltr:after:left-0 rtl:after:right-0 after:top-1.5 pb-4 last:before:hidden ${currentOrder.status === "Pending" ? "active" : "done"
+                        }`}
+                    >
+                      <div className="flex gap-4">
+                        <div className="grow">
+                          <h6 className="mb-2 text-yellow-500 text-15 dark:text-yellow-400">
+                            Đang xử lý
+                          </h6>
+                          <p className="text-gray-400 dark:text-zink-200">
+                            Đơn hàng đang được xử lý và chuẩn bị giao hàng.
+                          </p>
+                        </div>
+                        <p className="text-sm text-gray-400 dark:text-zink-200 shrink-0">
+                          {moment(currentOrder.createdTime)
+                            .add(2, "days")
+                            .format("DD MMM, YYYY")}
                         </p>
                       </div>
-                      <p className="text-sm text-gray-400 dark:text-zink-200 shrink-0">
-                        {moment(currentOrder.createdTime)
-                          .add(2, "days")
-                          .format("DD MMM, YYYY")}
-                      </p>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {(currentOrder.status === "Shipping" ||
                   currentOrder.status === "Delivered") && (
-                  <div
-                    className={`relative ltr:pl-6 rtl:pr-6 before:absolute ltr:before:border-l rtl:before:border-r ltr:before:left-[0.1875rem] rtl:before:right-[0.1875rem] before:border-slate-200 before:top-1.5 before:-bottom-1.5 after:absolute after:size-2 after:bg-white after:border after:border-slate-200 after:rounded-full ltr:after:left-0 rtl:after:right-0 after:top-1.5 pb-4 last:before:hidden ${
-                      currentOrder.status === "Shipping" ? "active" : "done"
-                    }`}
-                  >
-                    <div className="flex gap-4">
-                      <div className="grow">
-                        <h6 className="mb-2 text-purple-500 text-15 dark:text-purple-400">
-                          Đã giao hàng
-                        </h6>
-                        <p className="text-gray-400 dark:text-zink-200">
-                          Đơn hàng đã được giao và đang trên đường đến bạn.
+                    <div
+                      className={`relative ltr:pl-6 rtl:pr-6 before:absolute ltr:before:border-l rtl:before:border-r ltr:before:left-[0.1875rem] rtl:before:right-[0.1875rem] before:border-slate-200 before:top-1.5 before:-bottom-1.5 after:absolute after:size-2 after:bg-white after:border after:border-slate-200 after:rounded-full ltr:after:left-0 rtl:after:right-0 after:top-1.5 pb-4 last:before:hidden ${currentOrder.status === "Shipping" ? "active" : "done"
+                        }`}
+                    >
+                      <div className="flex gap-4">
+                        <div className="grow">
+                          <h6 className="mb-2 text-purple-500 text-15 dark:text-purple-400">
+                            Đã giao hàng
+                          </h6>
+                          <p className="text-gray-400 dark:text-zink-200">
+                            Đơn hàng đã được giao và đang trên đường đến bạn.
+                          </p>
+                        </div>
+                        <p className="text-sm text-gray-400 dark:text-zink-200 shrink-0">
+                          {moment(currentOrder.createdTime)
+                            .add(4, "days")
+                            .format("DD MMM, YYYY")}
                         </p>
                       </div>
-                      <p className="text-sm text-gray-400 dark:text-zink-200 shrink-0">
-                        {moment(currentOrder.createdTime)
-                          .add(4, "days")
-                          .format("DD MMM, YYYY")}
-                      </p>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {currentOrder.status === "Delivered" && (
                   <div
@@ -1402,10 +1395,9 @@ const OrderOverview = () => {
                       disabled={status.value === currentOrder.status}
                       onClick={() => handleStatusButtonClick(status.value)}
                       className={`px-3 py-2 text-sm rounded-md border transition-all
-                        ${
-                          status.value === currentOrder.status
-                            ? `${status.bgClass} ${status.textClass} border-${status.color}-200 dark:border-${status.color}-500/20 cursor-not-allowed`
-                            : `bg-white dark:bg-zink-700 border-slate-200 dark:border-zink-500 hover:${status.bgClass} hover:${status.textClass}`
+                        ${status.value === currentOrder.status
+                          ? `${status.bgClass} ${status.textClass} border-${status.color}-200 dark:border-${status.color}-500/20 cursor-not-allowed`
+                          : `bg-white dark:bg-zink-700 border-slate-200 dark:border-zink-500 hover:${status.bgClass} hover:${status.textClass}`
                         }`}
                     >
                       <div className="flex items-center justify-center">
@@ -1483,9 +1475,9 @@ const OrderOverview = () => {
             {selectedStatus && (
               <div className="w-full">
                 {/* Apply the status color to the entire container */}
-                {ORDER_STATUSES.map((status) => 
+                {ORDER_STATUSES.map((status) =>
                   status.value === selectedStatus && (
-                    <div 
+                    <div
                       key={status.value}
                       className={`p-3 rounded-md border ${status.bgClass} border-${status.color}-200 dark:border-${status.color}-500/20`}
                     >
