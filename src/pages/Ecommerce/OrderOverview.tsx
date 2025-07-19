@@ -54,14 +54,10 @@ const getStatusLabel = (status: string) => {
       return "Đang chờ";
     case "Shipping":
       return "Đang giao";
-    case "Delivering":
-      return "Đang giao";
     case "Delivered":
       return "Đã giao";
     case "Cancelled":
       return "Đã hủy";
-    case "Return":
-      return "Trả hàng";
     default:
       return status;
   }
@@ -79,6 +75,14 @@ const Status = ({ status }: { status: string }) => {
 // Update the ORDER_STATUSES constant with more detailed styling info
 const ORDER_STATUSES = [
   {
+    value: "Pending",
+    label: "Đang chờ",
+    color: "orange",
+    bgClass: "bg-orange-100 dark:bg-orange-500/20",
+    textClass: "text-orange-500",
+    dotClass: "bg-orange-500",
+  },
+  {
     value: "Processing",
     label: "Đang xử lý",
     color: "yellow",
@@ -87,7 +91,7 @@ const ORDER_STATUSES = [
     dotClass: "bg-yellow-500",
   },
   {
-    value: "Delivering",
+    value: "Shipping",
     label: "Đang giao",
     color: "purple",
     bgClass: "bg-purple-100 dark:bg-purple-500/20",
@@ -1043,7 +1047,7 @@ const OrderOverview = () => {
           </div>
 
           {/* Order Timeline Card */}
-          <div className="card mt-5">
+          {/* <div className="card mt-5">
             <div className="card-body">
               <div className="flex items-center justify-center size-12 bg-emerald-100 rounded-md dark:bg-emerald-500/20 ltr:float-right rtl:float-left">
                 <CalendarClock className="text-emerald-500 fill-emerald-200 dark:fill-emerald-500/30" />
@@ -1072,7 +1076,7 @@ const OrderOverview = () => {
                 )}
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
         <div className="lg:col-span-6 2xl:col-span-6">
           <div className="card" ref={invoiceRef}>
@@ -1199,161 +1203,48 @@ const OrderOverview = () => {
             <div className="card-body">
               <h6 className="mb-4 text-15">Trạng thái đơn hàng</h6>
               <div>
-                <div className="relative ltr:pl-6 rtl:pr-6 before:absolute ltr:before:border-l rtl:before:border-r ltr:before:left-[0.1875rem] rtl:before:right-[0.1875rem] before:border-slate-200 before:top-1.5 before:-bottom-1.5 after:absolute after:size-2 after:bg-white after:border after:border-slate-200 after:rounded-full ltr:after:left-0 rtl:after:right-0 after:top-1.5 pb-4 last:before:hidden done">
-                  <div className="flex gap-4">
-                    <div className="grow">
-                      <h6 className="mb-2 text-slate-500 text-15 dark:text-slate-400">
-                        Đã đặt hàng
-                      </h6>
-                      <p className="text-gray-400 dark:text-zink-200">
-                        Đơn hàng đã được đặt thành công.
-                      </p>
-                    </div>
-                    <p className="text-sm text-gray-400 dark:text-zink-200 shrink-0">
-                      {formatDate(currentOrder.createdTime)}
-                    </p>
-                  </div>
-                </div>
+                {/* Hiển thị đơn giản theo lịch sử thay đổi trạng thái */}
+                {currentOrder.statusChanges && currentOrder.statusChanges.length > 0 ? (
+                  currentOrder.statusChanges.map((change: any, index: number) => {
+                    // Tìm thông tin style cho trạng thái hiện tại
+                    const statusInfo = ORDER_STATUSES.find(s => s.value === change.status) || {
+                      label: getStatusLabel(change.status),
+                      textClass: "text-slate-500",
+                      color: "slate"
+                    };
 
-                {(currentOrder.status === "Awaiting Payment" ||
-                  currentOrder.status === "Pending" ||
-                  currentOrder.status === "Shipping" ||
-                  currentOrder.status === "Delivered") && (
-                    <div
-                      className={`relative ltr:pl-6 rtl:pr-6 before:absolute ltr:before:border-l rtl:before:border-r ltr:before:left-[0.1875rem] rtl:before:right-[0.1875rem] before:border-slate-200 before:top-1.5 before:-bottom-1.5 after:absolute after:size-2 after:bg-white after:border after:border-slate-200 after:rounded-full ltr:after:left-0 rtl:after:right-0 after:top-1.5 pb-4 last:before:hidden ${currentOrder.status === "Awaiting Payment"
-                        ? "active"
-                        : "done"
-                        }`}
-                    >
-                      <div className="flex gap-4">
-                        <div className="grow">
-                          <h6 className="mb-2 text-sky-500 text-15 dark:text-sky-400">
-                            Chờ thanh toán
-                          </h6>
-                          <p className="text-gray-400 dark:text-zink-200">
-                            Chờ xác nhận thanh toán.
+                    const isLatestStatus = index === currentOrder.statusChanges.length - 1;
+
+                    return (
+                      <div
+                        key={index}
+                        className={`relative ltr:pl-6 rtl:pr-6 before:absolute ltr:before:border-l rtl:before:border-r ltr:before:left-[0.1875rem] rtl:before:right-[0.1875rem] before:border-slate-200 before:top-1.5 ${index === currentOrder.statusChanges.length - 1 ? 'before:hidden' : 'before:-bottom-1.5'} after:absolute after:size-2 after:bg-white after:border after:border-slate-200 after:rounded-full ltr:after:left-0 rtl:after:right-0 after:top-1.5 pb-4 ${isLatestStatus ? 'active' : 'done'}`}
+                      >
+                        <div className="flex gap-4">
+                          <div className="grow">
+                            <h6 className={`mb-2 ${statusInfo.textClass} text-15 dark:${statusInfo.textClass}`}>
+                              {statusInfo.label}
+                            </h6>
+                            <p className="text-gray-400 dark:text-zink-200">
+                              {change.status === "Awaiting Payment" && "Đơn hàng đang chờ thanh toán."}
+                              {change.status === "Pending" && "Đơn hàng đang chờ xử lý."}
+                              {change.status === "Processing" && "Đơn hàng đang được xử lý và chuẩn bị giao hàng."}
+                              {change.status === "Shipping" && "Đơn hàng đã được giao và đang trên đường đến bạn."}
+                              {change.status === "Delivered" && "Đơn hàng đã được giao thành công."}
+                              {change.status === "Cancelled" && "Đơn hàng đã bị hủy."}
+                            </p>
+                          </div>
+                          <p className="text-sm text-gray-400 dark:text-zink-200 shrink-0">
+                            {formatDate(change.date)} {formatTime(change.date)}
                           </p>
                         </div>
-                        <p className="text-sm text-gray-400 dark:text-zink-200 shrink-0">
-                          {moment(currentOrder.createdTime)
-                            .add(1, "days")
-                            .format("DD MMM, YYYY")}
-                        </p>
                       </div>
-                    </div>
-                  )}
-
-                {(currentOrder.status === "Pending" ||
-                  currentOrder.status === "Shipping" ||
-                  currentOrder.status === "Delivered") && (
-                    <div
-                      className={`relative ltr:pl-6 rtl:pr-6 before:absolute ltr:before:border-l rtl:before:border-r ltr:before:left-[0.1875rem] rtl:before:right-[0.1875rem] before:border-slate-200 before:top-1.5 before:-bottom-1.5 after:absolute after:size-2 after:bg-white after:border after:border-slate-200 after:rounded-full ltr:after:left-0 rtl:after:right-0 after:top-1.5 pb-4 last:before:hidden ${currentOrder.status === "Pending" ? "active" : "done"
-                        }`}
-                    >
-                      <div className="flex gap-4">
-                        <div className="grow">
-                          <h6 className="mb-2 text-yellow-500 text-15 dark:text-yellow-400">
-                            Đang xử lý
-                          </h6>
-                          <p className="text-gray-400 dark:text-zink-200">
-                            Đơn hàng đang được xử lý và chuẩn bị giao hàng.
-                          </p>
-                        </div>
-                        <p className="text-sm text-gray-400 dark:text-zink-200 shrink-0">
-                          {moment(currentOrder.createdTime)
-                            .add(2, "days")
-                            .format("DD MMM, YYYY")}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                {(currentOrder.status === "Shipping" ||
-                  currentOrder.status === "Delivered") && (
-                    <div
-                      className={`relative ltr:pl-6 rtl:pr-6 before:absolute ltr:before:border-l rtl:before:border-r ltr:before:left-[0.1875rem] rtl:before:right-[0.1875rem] before:border-slate-200 before:top-1.5 before:-bottom-1.5 after:absolute after:size-2 after:bg-white after:border after:border-slate-200 after:rounded-full ltr:after:left-0 rtl:after:right-0 after:top-1.5 pb-4 last:before:hidden ${currentOrder.status === "Shipping" ? "active" : "done"
-                        }`}
-                    >
-                      <div className="flex gap-4">
-                        <div className="grow">
-                          <h6 className="mb-2 text-purple-500 text-15 dark:text-purple-400">
-                            Đã giao hàng
-                          </h6>
-                          <p className="text-gray-400 dark:text-zink-200">
-                            Đơn hàng đã được giao và đang trên đường đến bạn.
-                          </p>
-                        </div>
-                        <p className="text-sm text-gray-400 dark:text-zink-200 shrink-0">
-                          {moment(currentOrder.createdTime)
-                            .add(4, "days")
-                            .format("DD MMM, YYYY")}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                {currentOrder.status === "Delivered" && (
-                  <div
-                    className={`relative ltr:pl-6 rtl:pr-6 before:absolute ltr:before:border-l rtl:before:border-r ltr:before:left-[0.1875rem] rtl:before:right-[0.1875rem] before:border-slate-200 before:top-1.5 before:-bottom-1.5 after:absolute after:size-2 after:bg-white after:border after:border-slate-200 after:rounded-full ltr:after:left-0 rtl:after:right-0 after:top-1.5 pb-4 last:before:hidden active`}
-                  >
-                    <div className="flex gap-4">
-                      <div className="grow">
-                        <h6 className="mb-2 text-green-500 text-15 dark:text-green-400">
-                          Đã giao hàng
-                        </h6>
-                        <p className="text-gray-400 dark:text-zink-200">
-                          Đơn hàng đã được giao thành công.
-                        </p>
-                      </div>
-                      <p className="text-sm text-gray-400 dark:text-zink-200 shrink-0">
-                        {estimatedDeliveryDate}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {currentOrder.status === "Cancelled" && (
-                  <div
-                    className={`relative ltr:pl-6 rtl:pr-6 before:absolute ltr:before:border-l rtl:before:border-r ltr:before:left-[0.1875rem] rtl:before:right-[0.1875rem] before:border-slate-200 before:top-1.5 before:-bottom-1.5 after:absolute after:size-2 after:bg-white after:border after:border-slate-200 after:rounded-full ltr:after:left-0 rtl:after:right-0 after:top-1.5 pb-4 last:before:hidden active`}
-                  >
-                    <div className="flex gap-4">
-                      <div className="grow">
-                        <h6 className="mb-2 text-red-500 text-15 dark:text-red-400">
-                          Đã hủy đơn hàng
-                        </h6>
-                        <p className="text-gray-400 dark:text-zink-200">
-                          Đơn hàng đã bị hủy.
-                        </p>
-                      </div>
-                      <p className="text-sm text-gray-400 dark:text-zink-200 shrink-0">
-                        {moment(
-                          currentOrder.updatedTime || currentOrder.createdTime
-                        ).format("DD MMM, YYYY")}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {currentOrder.status === "Return" && (
-                  <div
-                    className={`relative ltr:pl-6 rtl:pr-6 before:absolute ltr:before:border-l rtl:before:border-r ltr:before:left-[0.1875rem] rtl:before:right-[0.1875rem] before:border-slate-200 before:top-1.5 before:-bottom-1.5 after:absolute after:size-2 after:bg-white after:border after:border-slate-200 after:rounded-full ltr:after:left-0 rtl:after:right-0 after:top-1.5 pb-4 last:before:hidden active`}
-                  >
-                    <div className="flex gap-4">
-                      <div className="grow">
-                        <h6 className="mb-2 text-slate-500 text-15 dark:text-slate-400">
-                          Đã trả hàng
-                        </h6>
-                        <p className="text-gray-400 dark:text-zink-200">
-                          Đơn hàng đã được trả lại bởi khách hàng.
-                        </p>
-                      </div>
-                      <p className="text-sm text-gray-400 dark:text-zink-200 shrink-0">
-                        {moment(
-                          currentOrder.updatedTime || currentOrder.createdTime
-                        ).format("DD MMM, YYYY")}
-                      </p>
-                    </div>
-                  </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-slate-500 dark:text-zink-200">
+                    Không có thông tin lịch sử đơn hàng
+                  </p>
                 )}
               </div>
             </div>

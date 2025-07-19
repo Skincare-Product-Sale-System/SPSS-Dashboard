@@ -16,7 +16,7 @@ import { ToastContainer } from 'react-toastify';
 import { Link } from "react-router-dom";
 
 // Define base URL for API
-const API_BASE_URL = "https://spssapi-hxfzbchrcafgd2hg.southeastasia-01.azurewebsites.net";
+const API_BASE_URL = "http://localhost:5041";
 
 // Configure axios defaults
 axios.defaults.headers.common['Content-Type'] = 'application/json';
@@ -49,6 +49,57 @@ apiClient.interceptors.request.use(
     return config;
   },
   error => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor to handle errors
+apiClient.interceptors.response.use(
+  response => {
+    return response;
+  },
+  async error => {
+    const originalRequest = error.config;
+
+    // Fix for _error$response$data3.join is not a function
+    // Make sure error.response.data exists and is properly formatted
+    if (error.response && error.response.data) {
+      // Ensure that if errors is an array, we handle it properly
+      if (error.response.data.errors && Array.isArray(error.response.data.errors)) {
+        console.log('Error response contains errors array:', error.response.data.errors);
+      } else if (error.response.data.errors && typeof error.response.data.errors === 'object') {
+        // Convert object of errors to array of strings
+        error.response.data.errors = Object.values(error.response.data.errors).flat();
+        console.log('Converted error object to array:', error.response.data.errors);
+      }
+    }
+
+    // If the error is 403 (Forbidden) or 401 (Unauthorized) and we haven't retried yet
+    if ((error.response?.status === 403 || error.response?.status === 401) && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        // Attempt to refresh the token or redirect to login
+        const authUser = localStorage.getItem('authUser');
+        if (authUser) {
+          // You can implement token refresh logic here if your API supports it
+          // For now, we'll just redirect to login
+
+          // Clear the current session
+          localStorage.removeItem('authUser');
+
+          // Redirect to login page
+          window.location.href = '/login';
+          return Promise.reject(error);
+        }
+      } catch (refreshError) {
+        console.error('Error refreshing token:', refreshError);
+        // Redirect to login
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+
     return Promise.reject(error);
   }
 );
@@ -116,7 +167,24 @@ export default function EditProduct() {
           }
         })
         .catch(err => {
-          setError(err.message || "Failed to load product data");
+          console.error("API Error:", err);
+          if (err.response) {
+            // The request was made and the server responded with a status code
+            // that falls out of the range of 2xx
+            if (err.response.status === 403) {
+              setError("Bạn không có quyền truy cập sản phẩm này. Vui lòng đăng nhập lại.");
+            } else if (err.response.status === 404) {
+              setError("Không tìm thấy sản phẩm. Sản phẩm có thể đã bị xóa hoặc di chuyển.");
+            } else {
+              setError(`Lỗi khi tải dữ liệu sản phẩm: ${err.response.status} - ${err.response.data?.message || err.message}`);
+            }
+          } else if (err.request) {
+            // The request was made but no response was received
+            setError("Không nhận được phản hồi từ máy chủ. Vui lòng kiểm tra kết nối mạng.");
+          } else {
+            // Something happened in setting up the request that triggered an Error
+            setError("Lỗi khi tải dữ liệu sản phẩm: " + err.message);
+          }
         })
         .finally(() => {
           setLoading(false);
@@ -889,10 +957,31 @@ export default function EditProduct() {
     setProductItems(newProductItems);
   };
 
-  // Add this function to handle the product update
+  // Add this function to log API requests and responses for debugging
+  const logApiRequest = (method: string, url: string, data: any): void => {
+    console.log(`API ${method} Request to ${url}:`, data);
+  };
+
+  // Add this function to handle API errors with better logging
+  const handleApiError = (error: any, action: string): void => {
+    console.error(`Error ${action}:`, error);
+
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+      console.error('Response headers:', error.response.headers);
+    } else if (error.request) {
+      console.error('Request made but no response received:', error.request);
+    } else {
+      console.error('Error setting up request:', error.message);
+    }
+  };
+
+  // Update the handleUpdateProduct function to fix the 400 Bad Request error
   const handleUpdateProduct = async () => {
     try {
       setIsSubmitting(true);
+      setErrorMessage("");
 
       // Get Firebase backend instance
       const firebaseBackend = getFirebaseBackend();
@@ -972,14 +1061,15 @@ export default function EditProduct() {
           }
         }
 
+        // Ensure all numeric values are properly formatted
         return {
           id: item.id || undefined, // Only include ID if it exists
           variationOptionIds: item.variationOptionIds || [],
           imageUrl: imageUrl,
-          price: parseFloat(item.price.toString().replace(/\s/g, '')),
-          marketPrice: parseFloat(item.marketPrice.toString().replace(/\s/g, '')),
-          purchasePrice: parseFloat(item.purchasePrice.toString().replace(/\s/g, '')),
-          quantityInStock: parseInt(item.quantityInStock.toString())
+          price: Number(String(item.price).replace(/\s/g, '')),
+          marketPrice: Number(String(item.marketPrice).replace(/\s/g, '')),
+          purchasePrice: Number(String(item.purchasePrice).replace(/\s/g, '')),
+          quantityInStock: Number(String(item.quantityInStock))
         };
       }));
 
@@ -1006,24 +1096,24 @@ export default function EditProduct() {
       const values = productFormik.values;
 
       // Prepare data for API submission
-      const updateProductData = {
+      const productData = {
         id: productId,
-        name: values.title,
-        description: values.description,
-        price: parseFloat(values.price.toString().replace(/\s/g, '')),
-        marketPrice: parseFloat(values.marketPrice.toString().replace(/\s/g, '')),
+        name: values.title, // Đảm bảo title không rỗng
+        description: values.description, // Đảm bảo description không rỗng
+        price: Number(String(values.price).replace(/\s/g, '')),
+        marketPrice: Number(String(values.marketPrice).replace(/\s/g, '')),
         status: values.status,
         brandId: values.brand,
         productCategoryId: values.category,
         productImageUrls: allProductImageUrls,
-        skinTypeIds: values.skinType,
+        skinTypeIds: values.skinType || [],
         variations: variationsData,
         productItems: processedProductItems,
         specifications: {
           detailedIngredients: values.detailedIngredients,
           mainFunction: values.mainFunction,
           texture: values.texture,
-          englishName: values.englishName || null,
+          englishName: values.englishName === null ? null : values.englishName || undefined,
           keyActiveIngredients: values.keyActiveIngredients,
           storageInstruction: values.storageInstruction,
           usageInstruction: values.usageInstruction,
@@ -1032,12 +1122,49 @@ export default function EditProduct() {
         }
       };
 
+      // Log request data before sending
+      console.log("Product data before sending:", productData);
+
+      // Kiểm tra các trường bắt buộc
+      if (!productData.name) {
+        setErrorMessage("Tên sản phẩm không được để trống");
+        setIsSubmitting(false);
+        toast.error("Tên sản phẩm không được để trống", {
+          position: "top-right",
+          autoClose: 5000
+        });
+        return;
+      }
+
+      if (!productData.description) {
+        setErrorMessage("Mô tả sản phẩm không được để trống");
+        setIsSubmitting(false);
+        toast.error("Mô tả sản phẩm không được để trống", {
+          position: "top-right",
+          autoClose: 5000
+        });
+        return;
+      }
+
+      // Gửi trực tiếp dữ liệu sản phẩm thay vì bọc trong productDto
+      const updateProductData = productData;
+
+      // Log the request for debugging
+      logApiRequest('PUT', `/api/products/${productId}`, updateProductData);
+
       // Make API call to update the product
       try {
-        await apiClient.put(
+        const response = await apiClient.put(
           `/api/products/${productId}`,
-          updateProductData
+          JSON.stringify(updateProductData),
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
         );
+
+        console.log("Update response:", response);
 
         // Show success toast notification
         toast.success("Sản phẩm đã được cập nhật thành công!", {
@@ -1056,6 +1183,8 @@ export default function EditProduct() {
         }, 2000);
       } catch (error: any) {
         // Log detailed error information
+        handleApiError(error, 'updating product');
+
         if (error.response) {
           // The request was made and the server responded with a status code
           // that falls out of the range of 2xx
@@ -1108,6 +1237,7 @@ export default function EditProduct() {
         }
       }
     } catch (error: any) {
+      handleApiError(error, 'processing update');
       setErrorMessage(error.message || "Đã xảy ra lỗi khi xử lý yêu cầu");
 
       // Show error toast
@@ -1180,15 +1310,34 @@ export default function EditProduct() {
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
           <strong className="font-bold">Lỗi!</strong>
           <span className="block sm:inline"> {error}</span>
-          <p className="mt-2">Vui lòng kiểm tra kết nối API tại: {API_BASE_URL}</p>
-          <div className="flex gap-2 mt-3">
-            <button
-              className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-              onClick={() => window.location.reload()}
-            >
-              Tải lại trang
-            </button>
-          </div>
+          {error.includes("không có quyền") || error.includes("đăng nhập lại") ? (
+            <div className="flex gap-2 mt-3">
+              <button
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                onClick={() => {
+                  localStorage.removeItem('authUser');
+                  window.location.href = '/login';
+                }}
+              >
+                Đăng nhập lại
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2 mt-3">
+              <button
+                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                onClick={() => window.location.reload()}
+              >
+                Tải lại trang
+              </button>
+              <button
+                className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                onClick={() => navigate('/apps-ecommerce-product-list')}
+              >
+                Quay lại danh sách
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-x-5">
