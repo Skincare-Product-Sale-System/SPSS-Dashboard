@@ -110,87 +110,73 @@ const Content: React.FC<ContentProps> = ({ as: Component = 'div', className, chi
   }, [placement]); // Add dependency array to useEffect
 
   const dropdownElementRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
 
   const isRtl = document.getElementsByTagName("html")[0].getAttribute("dir");
 
-  // Handle positioning for table environments
-  useEffect(() => {
+  // Function to update the position of the dropdown based on its trigger
+  const updatePosition = useCallback(() => {
     if (open && dropdownElementRef.current) {
       const dropdownElement = dropdownElementRef.current;
 
-      // Check if this dropdown is inside a table
-      const isInTable = dropdownElement.closest('table') !== null ||
-        className?.includes('table-dropdown-content');
+      // Find the trigger button if we haven't stored it yet
+      if (!triggerRef.current) {
+        triggerRef.current = dropdownElement.parentElement?.querySelector('button') || null;
+      }
 
-      if (isInTable) {
-        // For table dropdowns, use fixed positioning to escape table context
+      if (triggerRef.current) {
+        const rect = triggerRef.current.getBoundingClientRect();
+        const isInTable = dropdownElement.closest('table') !== null ||
+          className?.includes('table-dropdown-content');
+
+        // Always use fixed positioning for better positioning control
         dropdownElement.style.position = 'fixed';
         dropdownElement.style.zIndex = '9999';
 
-        // Get the trigger button position
-        const triggerElement = dropdownElement.parentElement?.querySelector('button');
-        if (triggerElement) {
-          const rect = triggerElement.getBoundingClientRect();
+        // Position based on placement
+        if (placementState.includes('top')) {
+          dropdownElement.style.bottom = `${window.innerHeight - rect.top + 5}px`;
+          dropdownElement.style.top = 'auto';
+        } else {
+          dropdownElement.style.top = `${rect.bottom + 5}px`;
+          dropdownElement.style.bottom = 'auto';
+        }
 
-          // Position based on placement
-          if (placementState.includes('top')) {
-            dropdownElement.style.bottom = `${window.innerHeight - rect.top + 5}px`;
-          } else {
-            dropdownElement.style.top = `${rect.bottom + 5}px`;
-          }
-
-          // Default to left positioning instead of right
+        // Horizontal positioning
+        if (placementState.includes('end')) {
+          dropdownElement.style.left = `${rect.right - dropdownElement.offsetWidth}px`;
+        } else {
           dropdownElement.style.left = `${rect.left}px`;
         }
       }
     }
-  }, [open, placement, className]);
+  }, [open, placementState, className]);
 
-  const getDropdownStyle = () => {
-    if (open && dropdownElementRef.current) {
-      const dropdownElement = dropdownElementRef.current;
+  // Update position on mount, open state change, scroll and resize
+  useEffect(() => {
+    if (open) {
+      // Initial position update
+      updatePosition();
 
-      // Skip inline styling for table dropdowns as they're handled by the useEffect
-      if (className?.includes('table-dropdown-content')) {
-        return {};
-      }
+      // Add scroll and resize listeners
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
 
-      dropdownElement.style.position = 'absolute';
-      dropdownElement.style.zIndex = '9999';
-
-      // Ensure the dropdown is visible by adding a higher stacking context
-      // Default all placements to left side positioning
-      if (placementState === 'right-end') {
-        dropdownElement.style.inset = '0px auto auto 0px';
-        dropdownElement.style.margin = '0px';
-        dropdownElement.style.transform = 'translate(0px, 54px)';
-      }
-      else if (placementState === 'start-end') {
-        dropdownElement.style.inset = '0px auto auto 0px';
-        dropdownElement.style.margin = '0px';
-        dropdownElement.style.transform = 'translate(0px, 20px)';
-      }
-      else if (placementState === 'top-end') {
-        dropdownElement.style.inset = 'auto auto 0px 0px';
-        dropdownElement.style.margin = '0px';
-        dropdownElement.style.transform = 'translate(0px, -30px)';
-      }
-      else if (placementState === 'bottom-start') {
-        dropdownElement.style.inset = '0px auto auto 0px';
-        dropdownElement.style.margin = '0px';
-        dropdownElement.style.transform = 'translate(0px, 54px)';
-      }
-      else if (placementState === 'bottom-end') {
-        dropdownElement.style.inset = '0px auto auto 0px';
-        dropdownElement.style.margin = '0px';
-        dropdownElement.style.transform = 'translate(0px, 39px)';
-      }
-      else if (placementState === 'top-start') {
-        dropdownElement.style.inset = 'auto auto 0px 0px';
-        dropdownElement.style.margin = '0px';
-        dropdownElement.style.transform = 'translate(0px, -95px)';
-      }
+      return () => {
+        window.removeEventListener('scroll', updatePosition, true);
+        window.removeEventListener('resize', updatePosition);
+      };
     }
+
+    // Reset trigger reference when dropdown closes
+    return () => {
+      triggerRef.current = null;
+    };
+  }, [open, updatePosition]);
+
+  // Legacy style support (using the old method for non-table dropdowns)
+  const getDropdownStyle = () => {
+    // Always return empty object as we're now handling positioning in the effect
     return {};
   };
 

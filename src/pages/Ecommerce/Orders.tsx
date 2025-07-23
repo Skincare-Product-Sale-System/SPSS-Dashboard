@@ -26,11 +26,9 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { toast } from 'react-hot-toast';
 
-// Add custom styles to ensure dropdowns in tables are visible
+// Custom styles for table dropdowns - now using dynamic positioning
 const tableDropdownStyles = `
   .table-dropdown-content {
-    position: fixed !important;
-    z-index: 9999 !important;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
   }
 `;
@@ -451,7 +449,7 @@ const Orders = () => {
                                                         <Dropdown.Trigger id={`orderAction${index}`} data-bs-toggle="dropdown" className="flex items-center justify-center size-[30px] p-0 text-slate-500 btn bg-slate-100 hover:text-white hover:bg-slate-600 focus:text-white focus:bg-slate-600 focus:ring focus:ring-slate-100 active:text-white active:bg-slate-600 active:ring active:ring-slate-100 dark:bg-slate-500/20 dark:text-slate-400 dark:hover:bg-slate-500 dark:hover:text-white dark:focus:bg-slate-500 dark:focus:text-white dark:active:bg-slate-500 dark:active:text-white dark:ring-slate-400/20">
                                                             <MoreHorizontal className="size-3" />
                                                         </Dropdown.Trigger>
-                                                        <Dropdown.Content placement={index > 5 ? "top-start" : "bottom-start"} className="absolute z-[9999] py-2 mt-1 ltr:text-left rtl:text-right list-none bg-white rounded-md shadow-md min-w-[10rem] dark:bg-zink-600 !transform-none table-dropdown-content" aria-labelledby={`orderAction${index}`}>
+                                                        <Dropdown.Content placement={index > 5 ? "top-start" : "bottom-start"} className="py-2 mt-1 ltr:text-left rtl:text-right list-none bg-white rounded-md shadow-md min-w-[10rem] dark:bg-zink-600 table-dropdown-content" aria-labelledby={`orderAction${index}`}>
                                                             <li>
                                                                 <Link
                                                                     to={`/apps-ecommerce-order-overview?id=${order.id}`}
