@@ -603,7 +603,7 @@ const Account = () => {
             return (
                 <div className="flex justify-between items-center mt-4 mr-4">
                     <div className="text-sm text-slate-500 dark:text-zink-200">
-                        Hiển thị {filteredUsers.length} kết quả
+                        Hiển thị {filteredUsers.length} kết quả (Tổng số: {totalCount})
                     </div>
                     <button
                         type="button"
@@ -644,8 +644,8 @@ const Account = () => {
                             <button
                                 type="button"
                                 className={`flex items-center justify-center size-8 transition-all duration-150 ease-linear border rounded border-slate-200 dark:border-zink-500 ${currentPage === i + 1
-                                        ? "text-white bg-custom-500 border-custom-500 hover:text-white hover:bg-custom-600 hover:border-custom-600 focus:text-white focus:bg-custom-600 focus:border-custom-600 active:text-white active:bg-custom-600 active:border-custom-600"
-                                        : "text-slate-500 bg-white hover:text-custom-500 hover:border-custom-500 focus:text-custom-500 focus:border-custom-500 active:text-custom-500 active:border-custom-500 dark:bg-zink-700 dark:text-zink-200 dark:border-zink-500 dark:hover:text-custom-500 dark:hover:border-custom-500"
+                                    ? "text-white bg-custom-500 border-custom-500 hover:text-white hover:bg-custom-600 hover:border-custom-600 focus:text-white focus:bg-custom-600 focus:border-custom-600 active:text-white active:bg-custom-600 active:border-custom-600"
+                                    : "text-slate-500 bg-white hover:text-custom-500 hover:border-custom-500 focus:text-custom-500 focus:border-custom-500 active:text-custom-500 active:border-custom-500 dark:bg-zink-700 dark:text-zink-200 dark:border-zink-500 dark:hover:text-custom-500 dark:hover:border-custom-500"
                                     }`}
                                 onClick={() => goToPage(i + 1)}
                             >
@@ -678,7 +678,7 @@ const Account = () => {
                         <div className="card">
                             <div className="card-body">
                                 <div className="flex items-center justify-between gap-2 mb-4">
-                                    <h6 className="text-15 grow">Chi Tiết Tài Khoản</h6>
+                                    <h6 className="text-15 grow">Chi Tiết Tài Khoản <span className="ml-2 text-sm font-normal text-slate-500 dark:text-zink-200">(Tổng số: {totalCount})</span></h6>
                                     <div className="flex gap-2">
                                         <button type="button" className="text-white btn bg-custom-500 border-custom-500 hover:text-white hover:bg-custom-600 focus:text-white focus:bg-custom-600 focus:border-custom-600 focus:ring focus:ring-custom-100 active:text-white active:bg-custom-600 active:border-custom-600 active:ring active:ring-custom-100 dark:ring-custom-400/20" onClick={toggle}>
                                             <Plus className="inline-block size-4 align-middle ltr:mr-1 rtl:ml-1" /> <span className="align-middle">Thêm Tài Khoản</span>
