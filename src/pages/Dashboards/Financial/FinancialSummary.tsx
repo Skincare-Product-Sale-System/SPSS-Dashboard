@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, Users, Archive } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, Users, Archive, User, Truck, ShoppingBag } from 'lucide-react';
 
 interface FinancialSummaryProps {
   data: {
@@ -18,6 +18,9 @@ interface FinancialSummaryProps {
     completedOrderRate: number;
     pendingOrderRate: number;
     discountRate: number;
+    totalUsers: number;
+    totalOrders: number;
+    totalDeliveredOrders: number;
   };
 }
 
@@ -47,6 +50,40 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({ data }) => {
     if (value > 0) return `+${formatPercentage(value)}`;
     return formatPercentage(value);
   };
+
+  // Top row cards - user and order metrics
+  const userOrderCards = [
+    {
+      title: 'Tổng Người Dùng',
+      value: data.totalUsers.toString(),
+      icon: <User className="h-6 w-6 text-blue-600" />,
+      iconBg: 'bg-blue-100',
+      textColor: 'text-blue-600',
+      trend: 'neutral',
+      trendValue: '',
+      description: 'Tổng số người dùng'
+    },
+    {
+      title: 'Tổng Đơn Hàng',
+      value: data.totalOrders.toString(),
+      icon: <ShoppingBag className="h-6 w-6 text-purple-600" />,
+      iconBg: 'bg-purple-100',
+      textColor: 'text-purple-600',
+      trend: 'neutral',
+      trendValue: '',
+      description: 'Tổng số đơn hàng'
+    },
+    {
+      title: 'Đơn Hàng Đã Giao',
+      value: data.totalDeliveredOrders.toString(),
+      icon: <Truck className="h-6 w-6 text-green-600" />,
+      iconBg: 'bg-green-100',
+      textColor: 'text-green-600',
+      trend: 'neutral',
+      trendValue: '',
+      description: 'Tổng số đơn hàng đã giao'
+    }
+  ];
 
   // First row cards - financial metrics
   const financialCards = [
@@ -151,6 +188,13 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({ data }) => {
 
   return (
     <div className="space-y-5">
+      {/* Top row - User and Order metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {userOrderCards.map((card, index) => (
+          <Card key={`user-order-${index}`} card={card} />
+        ))}
+      </div>
+
       {/* First row - Financial metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {financialCards.map((card, index) => (

@@ -27,6 +27,9 @@ interface FinancialData {
     discountRate: number;
     startDate: string;
     endDate: string;
+    totalUsers: number;
+    totalOrders: number;
+    totalDeliveredOrders: number;
   };
   topProfitableProducts: Array<{
     productId: string;
