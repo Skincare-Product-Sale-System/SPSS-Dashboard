@@ -9,6 +9,7 @@ interface ProductProfitData {
   procurementCost: number;
   profit: number;
   profitMargin: number;
+  imageUrl?: string;
 }
 
 interface ProductProfitAnalysisProps {
@@ -47,7 +48,7 @@ const ProductProfitAnalysis: React.FC<ProductProfitAnalysisProps> = ({ data }) =
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      {/* <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
           <div className="flex items-center space-x-2 mb-2">
             <DollarSign className="h-5 w-5 text-blue-600" />
@@ -55,7 +56,7 @@ const ProductProfitAnalysis: React.FC<ProductProfitAnalysisProps> = ({ data }) =
           </div>
           <p className="text-xl font-bold text-gray-900">{formatCurrency(totalRevenue)}</p>
         </div>
-        
+
         <div className="p-4 bg-green-50 rounded-lg border border-green-200">
           <div className="flex items-center space-x-2 mb-2">
             <TrendingUp className="h-5 w-5 text-green-600" />
@@ -63,7 +64,7 @@ const ProductProfitAnalysis: React.FC<ProductProfitAnalysisProps> = ({ data }) =
           </div>
           <p className="text-xl font-bold text-gray-900">{formatCurrency(totalProfit)}</p>
         </div>
-        
+
         <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
           <div className="flex items-center space-x-2 mb-2">
             <Package className="h-5 w-5 text-orange-600" />
@@ -71,7 +72,7 @@ const ProductProfitAnalysis: React.FC<ProductProfitAnalysisProps> = ({ data }) =
           </div>
           <p className="text-xl font-bold text-gray-900">{formatCurrency(totalCost)}</p>
         </div>
-        
+
         <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
           <div className="flex items-center space-x-2 mb-2">
             <BarChart3 className="h-5 w-5 text-purple-600" />
@@ -79,7 +80,7 @@ const ProductProfitAnalysis: React.FC<ProductProfitAnalysisProps> = ({ data }) =
           </div>
           <p className="text-xl font-bold text-gray-900">{formatPercentage(averageProfitMargin)}</p>
         </div>
-      </div>
+      </div> */}
 
       {/* Products Table */}
       <div className="overflow-x-auto">
@@ -101,7 +102,15 @@ const ProductProfitAnalysis: React.FC<ProductProfitAnalysisProps> = ({ data }) =
                   <td className="px-6 py-4">
                     <div className="flex items-center">
                       <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center mr-3">
-                        <Package className="h-4 w-4 text-gray-600" />
+                        {product.imageUrl ? (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.productName}
+                            className="h-8 w-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <Package className="h-4 w-4 text-gray-600" />
+                        )}
                       </div>
                       <div>
                         <div className="text-sm font-medium text-gray-900">{product.productName}</div>
@@ -131,8 +140,8 @@ const ProductProfitAnalysis: React.FC<ProductProfitAnalysisProps> = ({ data }) =
                   <td className="px-6 py-4">
                     <div className="flex items-center">
                       <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full" 
+                        <div
+                          className="bg-blue-600 h-2 rounded-full"
                           style={{ width: `${Math.min(product.profitMargin, 100)}%` }}
                         ></div>
                       </div>

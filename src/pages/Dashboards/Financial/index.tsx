@@ -39,6 +39,7 @@ interface FinancialData {
     procurementCost: number;
     profit: number;
     profitMargin: number;
+    imageUrl?: string;
   }>;
   monthlyReports: Array<{
     year: number;
